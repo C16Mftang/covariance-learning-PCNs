@@ -32,8 +32,8 @@ mu_x = np.array([1, 1])
 Sx = np.eye(2)
 
 def data_generation(cov):
-    Sy = np.array([[4, cov],
-                   [cov, 4]])           
+    Sy = np.array([[1, cov],
+                   [cov, 1]])           
     x = np.empty((sample_size, 2))
     y = np.empty((sample_size, 2))
     mu_y = np.empty((sample_size, 2))
@@ -96,7 +96,7 @@ def standard_pcn(y):
     print(curr_mu_x)
     print(curr_W)
 
-    return std_mses_mu_x
+    return err_ys
 
 
 def recurrent_pcn(y):
@@ -152,20 +152,20 @@ def recurrent_pcn(y):
     print(curr_W)
     print(curr_Wr)
 
-    return rec_mses_mu_x
+    return err_ys
 
 fig, ax = plt.subplots(1, 2, figsize=(10,4))
-for cov in [0, 0.1, 1, 2, 4]:
+for cov in [0, 0.1, 1]:
     y = data_generation(cov)
-    std_mses_mu_x = standard_pcn(y)
-    rec_mses_mu_x = recurrent_pcn(y)
-    ax[0].plot(std_mses_mu_x, label=f'cov={cov}')
-    ax[1].plot(rec_mses_mu_x, label=f'cov={cov}')
+    std_err_ys = standard_pcn(y)
+    rec_err_ys = recurrent_pcn(y)
+    ax[0].plot(std_err_ys, label=f'cov={cov}')
+    ax[1].plot(rec_err_ys, label=f'cov={cov}')
 ax[0].legend()
-ax[0].set_title('MSE on mu_x: standard')
+ax[0].set_title('squared error in y: standard')
 ax[0].set_xlabel('training epochs')
 ax[1].legend()
-ax[1].set_title('MSE on mu_x: recurrent')
+ax[1].set_title('squared error in y: recurrent')
 ax[1].set_xlabel('training epochs')
 plt.show()
 
