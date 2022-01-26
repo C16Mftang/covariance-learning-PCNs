@@ -56,8 +56,8 @@ def standard_pcn(y):
     batch_size = 100
     relax_itrs = 100
     eval_itrs = 100
-    lr_x = 1e-4
-    lr_W = 5e-5
+    lr_x = 3e-3
+    lr_W = 1e-3
     lr_eval = 3e-3
     # initialize parameters
     curr_mu_x = np.zeros_like(mu_x)
@@ -102,6 +102,7 @@ def standard_pcn(y):
     print('Standard PCN')
     print(curr_mu_x)
     print(curr_W)
+    print(err_ys[-1])
 
     return err_ys, all_pred
 
@@ -113,7 +114,7 @@ def recurrent_pcn(y):
     batch_size = 100
     relax_itrs = 100
     eval_itrs = 100
-    lr_x = 3e-5
+    lr_x = 3e-3
     lr_W = 1e-5
     lr_Wr = 5e-7
     lr_eval = 3e-3
@@ -159,6 +160,8 @@ def recurrent_pcn(y):
         all_err_y = y - all_pred
         err_ys.append(np.mean(all_err_y**2))
         rec_mses_mu_x.append(np.mean((curr_mu_x - mu_x)**2))
+
+    print(curr_xs)
         
     print('Recurrent PCN')
     print(curr_mu_x)
@@ -168,23 +171,23 @@ def recurrent_pcn(y):
     return err_ys, all_pred
 
 # check learning curves
-fig, ax = plt.subplots(1, 2, figsize=(10,4))
-for cov in [0, 0.1, 0.25, 0.5, 0.75, 1]:
-    y = data_generation(cov)
-    std_err_ys, _ = standard_pcn(y)
-    rec_err_ys, _ = recurrent_pcn(y)
-    ax[0].plot(std_err_ys, label=f'cov={cov}')
-    ax[1].plot(rec_err_ys, label=f'cov={cov}')
-ax[0].legend()
-ax[0].set_title('MSE on observations: standard')
-ax[0].set_xlabel('training epochs')
-ax[0].set_ylabel('MSE')
-ax[0].set
-ax[1].legend()
-ax[1].set_title('MSE on observations: recurrent')
-ax[1].set_xlabel('training epochs')
-ax[0].set_ylabel('MSE')
-plt.show()
+# fig, ax = plt.subplots(1, 2, figsize=(10,4))
+# for cov in [0, 0.1, 0.25, 0.5, 0.75, 1]:
+#     y = data_generation(cov)
+#     std_err_ys, _ = standard_pcn(y)
+#     rec_err_ys, _ = recurrent_pcn(y)
+#     ax[0].plot(std_err_ys, label=f'cov={cov}')
+#     ax[1].plot(rec_err_ys, label=f'cov={cov}')
+# ax[0].legend()
+# ax[0].set_title('MSE on observations: standard')
+# ax[0].set_xlabel('training epochs')
+# ax[0].set_ylabel('MSE')
+# ax[0].set
+# ax[1].legend()
+# ax[1].set_title('MSE on observations: recurrent')
+# ax[1].set_xlabel('training epochs')
+# ax[0].set_ylabel('MSE')
+# plt.show()
 
 # check prediction alignment to true
 fig, ax = plt.subplots(1, 2, figsize=(10,4))
