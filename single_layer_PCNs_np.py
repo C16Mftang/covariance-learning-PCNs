@@ -15,7 +15,7 @@ if artificial_data:
     mean = np.array([0,0])
     cov = np.array([[1,0.5],
                     [0.5,1]])
-    np.random.seed(20)
+    np.random.seed(10)
     X = np.random.multivariate_normal(mean, cov, size=sample_size)
     X_c = X * np.concatenate([np.ones((sample_size,1))]+[np.zeros((sample_size,1))]*(dim-1), axis=1)
     update_mask = np.concatenate([np.zeros((sample_size,1))]+[np.ones((sample_size,1))]*(dim-1), axis=1)
@@ -79,7 +79,7 @@ def memory_Friston(batch_size, training_lr):
         mse_F.append(np.mean((X[:,1] - X_recon_F[:,1])**2)) 
     # print("Learned covariance using Friston's update:\n", F_cov)
 
-    return mse_F, covs
+    return mse_F, covs, X_recon_F
 
 
 def memory_Rafal(batch_size, training_lr):
@@ -110,7 +110,7 @@ def memory_Rafal(batch_size, training_lr):
         mse_R.append(np.mean((X[:,1] - X_recon_R[:,1])**2))
     # print("Learned covariance using Rafal's update:\n", R_cov)
 
-    return mse_R, covs
+    return mse_R, covs, X_recon_R
 
 
 def memory_rec(batch_size, training_lr):
@@ -139,7 +139,7 @@ def memory_rec(batch_size, training_lr):
         mse_rec.append(np.mean((X[:,1] - X_recon_rec[:,1])**2))
     # print("Learned weight matrix by rec PCN:\n", weights)
 
-    return mse_rec, weights
+    return mse_rec, weights, X_recon_rec
 
 def cosine_similarity_weights(batch_size, lr):
     mse_F, covs_F = memory_Friston(batch_size, lr[0])
@@ -212,8 +212,49 @@ def best_lrs(batch_size):
     print('Rafal\'s estimate:\n', covs_R1[-1], '\n', covs_R2[-1])
     print('Rec nets estimtae:\n', w1, '\n', w2)
 
+def plot_smth():
+    mse_F, covs_F, X_recon_F = memory_Friston(1, 0.001)
+    mse_R, covs_R, X_recon_R = memory_Rafal(1, 0.001)
+    mse_rec, covs_rec, X_recon_rec = memory_rec(1, 0.001)
+    ML_cov = np.cov(X.T)
+    fig, ax = plt.subplots(1, 2, figsize=(12,5))
+    ax[0].scatter(X[:,0], X[:,1], alpha=0.3, color='gray', label='Data')
+    ax[0].plot(X[:,0], X_recon_F[:,1], label='Friston')
+    ax[0].plot(X[:,0], X_recon_R[:,1], label='Rafal')
+    ax[0].plot(X[:,0], X_recon_rec[:,1], label='Recurrent')
+    ax[0].plot(X[:,0], (ML_cov[0,1]/ML_cov[1,1])*X[:,0], label=r'$\Sigma_{12}/\Sigma_{22}$')
+    ax[0].set_xlabel('x1')
+    ax[0].set_ylabel('x2')
+    ax[0].legend()
+    ax[0].set_title(r'Linear prediction of $x_2$ from $x_1$')
+
+    ax[1].plot(mse_F, label='Friston')
+    ax[1].plot(mse_R, label='Rafal')
+    ax[1].plot(mse_rec, label='Recurrent')
+    ax[1].set_xlabel('Learning epochs')
+    ax[1].set_ylabel('MSE')
+    ax[1].set_title(r'MSE($\Vert X_{original} - X_{retrieved} \Vert^2$)')
+    ax[1].legend()
+    plt.savefig('./figs/seed20', dpi=200)
+    plt.show()
+
+def plot_mse():
+    mse_F, covs_F, X_recon_F = memory_Friston(1, 0.001)
+    mse_R, covs_R, X_recon_R = memory_Rafal(1, 0.001)
+    mse_rec, covs_rec, X_recon_rec = memory_rec(1, 0.001)
+
+    plt.plot(mse_F, label='Friston')
+    plt.plot(mse_R, label='Rafal')
+    plt.plot(mse_rec, label='Recurrent')
+    plt.xlabel('Learning epochs')
+    plt.ylabel('MSE')
+    plt.title(r'MSE($\Vert X_{original} - X_{retrieved} \Vert^2$)')
+    plt.legend()
+    plt.savefig('./figs/unstable_mse', dpi=200)
+    plt.show()
+
 def main():
-    best_lrs(batch_size=1)
+    plot_mse()
     
 
 if __name__ == '__main__':

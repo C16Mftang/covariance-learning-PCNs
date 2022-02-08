@@ -5,43 +5,9 @@ import torch.nn as nn
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from get_data import get_cifar10, get_fashionMNIST
 
 device = "cpu"
-
-def get_cifar10(datapath, sample_size, batch_size, seed, cover_size):
-    transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=1),
-        transforms.ToTensor(),
-    ])
-    train = datasets.CIFAR10(datapath, train=True, transform=transform, download=True)
-    test = datasets.CIFAR10(datapath, train=False, transform=transform, download=True)
-    
-    if sample_size != len(train):
-        random.seed(seed)
-        train = torch.utils.data.Subset(train, random.sample(range(len(train)), sample_size))
-    train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=False)
-    test_loader = torch.utils.data.DataLoader(test, batch_size=batch_size, shuffle=False)
-
-    X = []
-    for batch_idx, (data, targ) in enumerate(train_loader):
-        X.append(data)
-    X = torch.cat(X, dim=0).squeeze().to(device) # size, 32, 32
-
-    # create the corrupted version
-    size = X.shape
-    mask = torch.ones_like(X).to(device)
-    mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
-    update_mask = torch.zeros_like(X).to(device)
-    update_mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] += 1
-    update_mask = update_mask.reshape(-1, 32**2)
-
-    X_c = (X * mask).to(device) # size, 32, 32
-
-    X = X.reshape(-1, 32**2) # size, 1024
-    X_c = X_c.reshape(-1, 32**2) # size, 1024
-
-    return X, X_c, update_mask
-
 
 class RecPCN(object):
     def __init__(self, dim):
@@ -69,12 +35,17 @@ learning_iters = 100
 learning_lr = 0.001
 inference_iters = 100
 inference_lr = 0.1
-sample_size = 100
+sample_size = 50
 batch_size = 1
 cover_size = 12
+image_size = 28
 
-pcn = RecPCN(dim=1024)
-X, X_c, update_mask = get_cifar10('./data', sample_size=sample_size, batch_size=batch_size, seed=10, cover_size=cover_size)
+pcn = RecPCN(dim=image_size**2)
+X, X_c, update_mask = get_fashionMNIST('./data', sample_size=sample_size, 
+                                  batch_size=batch_size, 
+                                  seed=10, 
+                                  cover_size=cover_size, 
+                                  device=device)
 
 mse = []
 for i in range(learning_iters):
@@ -92,10 +63,10 @@ for i in range(learning_iters):
 
 fig, ax = plt.subplots(5, 3, figsize=(5,8))
 for i in range(5):
-    ax[i, 0].imshow(X[i].cpu().detach().numpy().reshape(32, 32), cmap='gray')
+    ax[i, 0].imshow(X[i].cpu().detach().numpy().reshape(image_size, image_size), cmap='gray')
     ax[i, 0].axis('off')
-    ax[i, 1].imshow(X_c[i].cpu().detach().numpy().reshape(32, 32), cmap='gray')
+    ax[i, 1].imshow(X_c[i].cpu().detach().numpy().reshape(image_size, image_size), cmap='gray')
     ax[i, 1].axis('off')
-    ax[i, 2].imshow(X_recon[i].cpu().detach().numpy().reshape(32, 32), cmap='gray')
+    ax[i, 2].imshow(X_recon[i].cpu().detach().numpy().reshape(image_size, image_size), cmap='gray')
     ax[i, 2].axis('off')
 plt.show()

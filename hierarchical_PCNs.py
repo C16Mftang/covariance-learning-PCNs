@@ -115,8 +115,8 @@ def recurrent_pcn(y):
     relax_itrs = 100
     eval_itrs = 100
     lr_x = 3e-3
-    lr_W = 1e-5
-    lr_Wr = 5e-7
+    lr_W = 1e-3
+    lr_Wr = 5e-5
     lr_eval = 3e-3
     # initialize parameters
     curr_mu_x = np.zeros_like(mu_x)
@@ -171,42 +171,42 @@ def recurrent_pcn(y):
     return err_ys, all_pred
 
 # check learning curves
-# fig, ax = plt.subplots(1, 2, figsize=(10,4))
-# for cov in [0, 0.1, 0.25, 0.5, 0.75, 1]:
-#     y = data_generation(cov)
-#     std_err_ys, _ = standard_pcn(y)
-#     rec_err_ys, _ = recurrent_pcn(y)
-#     ax[0].plot(std_err_ys, label=f'cov={cov}')
-#     ax[1].plot(rec_err_ys, label=f'cov={cov}')
-# ax[0].legend()
-# ax[0].set_title('MSE on observations: standard')
-# ax[0].set_xlabel('training epochs')
-# ax[0].set_ylabel('MSE')
-# ax[0].set
-# ax[1].legend()
-# ax[1].set_title('MSE on observations: recurrent')
-# ax[1].set_xlabel('training epochs')
-# ax[0].set_ylabel('MSE')
-# plt.show()
+fig, ax = plt.subplots(1, 2, figsize=(10,4))
+for cov in [0, 0.1, 0.25, 0.5, 0.75, 1]:
+    y = data_generation(cov)
+    std_err_ys, _ = standard_pcn(y)
+    rec_err_ys, _ = recurrent_pcn(y)
+    ax[0].plot(std_err_ys, label=f'cov={cov}')
+    ax[1].plot(rec_err_ys, label=f'cov={cov}')
+ax[0].legend()
+ax[0].set_title('MSE on observations: standard')
+ax[0].set_xlabel('training epochs')
+ax[0].set_ylabel('MSE')
+ax[0].set
+ax[1].legend()
+ax[1].set_title('MSE on observations: recurrent')
+ax[1].set_xlabel('training epochs')
+ax[0].set_ylabel('MSE')
+plt.show()
 
 # check prediction alignment to true
-fig, ax = plt.subplots(1, 2, figsize=(10,4))
-y = data_generation(1)
-std_err_ys, std_pred = standard_pcn(y)
-rec_err_ys, rec_pred = recurrent_pcn(y)
-ax[0].scatter(y[:,0], std_pred[:,0], alpha=0.3, label='standard')
-ax[0].scatter(y[:,0], rec_pred[:,0], alpha=0.3, label='recurrent')
-ax[0].plot([-5, 13], [-5,13], ls='--', label='identity', c='k')
-ax[0].set_xlabel('True y[0]')
-ax[0].set_ylabel('Prediction from model (Wx[0])')
-ax[0].legend()
-ax[1].scatter(y[:,1], std_pred[:,1], alpha=0.3, label='standard')
-ax[1].scatter(y[:,1], rec_pred[:,1], alpha=0.3, label='recurrent')
-ax[1].plot([-5, 13], [-5,13], ls='--', label='identity', c='k')
-ax[1].set_xlabel('True y[1]')
-ax[1].set_ylabel('Prediction from model (Wx[1])')
-ax[1].legend()
-plt.show()
+# fig, ax = plt.subplots(1, 2, figsize=(10,4))
+# y = data_generation(1)
+# std_err_ys, std_pred = standard_pcn(y)
+# rec_err_ys, rec_pred = recurrent_pcn(y)
+# ax[0].scatter(y[:,0], std_pred[:,0], alpha=0.3, label='standard')
+# ax[0].scatter(y[:,0], rec_pred[:,0], alpha=0.3, label='recurrent')
+# ax[0].plot([-5, 13], [-5,13], ls='--', label='identity', c='k')
+# ax[0].set_xlabel('True y[0]')
+# ax[0].set_ylabel('Prediction from model (Wx[0])')
+# ax[0].legend()
+# ax[1].scatter(y[:,1], std_pred[:,1], alpha=0.3, label='standard')
+# ax[1].scatter(y[:,1], rec_pred[:,1], alpha=0.3, label='recurrent')
+# ax[1].plot([-5, 13], [-5,13], ls='--', label='identity', c='k')
+# ax[1].set_xlabel('True y[1]')
+# ax[1].set_ylabel('Prediction from model (Wx[1])')
+# ax[1].legend()
+# plt.show()
 
 
 
