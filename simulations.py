@@ -6,32 +6,9 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 from get_data import get_cifar10, get_fashionMNIST
+from models import RecPCN
 
 device = "cpu"
-
-class RecPCN(nn.Module):
-    def __init__(self, dim):
-        super().__init__()
-        self.dim = dim
-        # initialize parameters
-        bound = 1. / np.sqrt(dim)
-        self.Wr = nn.Parameter(torch.zeros((dim, dim)))
-
-    def forward(self, X):
-        return torch.matmul(X, self.Wr.t())
-        
-    def learning(self, X):
-        preds = self.forward(X)
-        errs = X - preds
-        grad_Wr = torch.matmul(errs.T, X).fill_diagonal_(0)
-
-        self.Wr.grad = -grad_Wr
-
-    def inference(self, X_c):
-        errs_X = X_c - self.forward(X_c)
-        delta_X = -errs_X
-
-        return delta_X
 
 
 learning_iters = 100

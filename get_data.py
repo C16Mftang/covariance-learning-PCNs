@@ -60,9 +60,10 @@ def get_fashionMNIST(datapath, sample_size, batch_size, seed, cover_size, device
     # create the corrupted version
     size = X.shape
     mask = torch.ones_like(X).to(device)
-    mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
+    # mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
+    mask[:, size[1]//2:, :] -= 1
     update_mask = torch.zeros_like(X).to(device)
-    update_mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] += 1
+    update_mask[:, size[1]//2:, :] += 1
     update_mask = update_mask.reshape(-1, 28**2)
 
     X_c = (X * mask).to(device) # size, 28, 28
