@@ -33,16 +33,20 @@ class RecPCN(nn.Module):
         # initialize parameters
         bound = 1. / np.sqrt(dim)
         self.Wr = nn.Parameter(torch.zeros((dim, dim)))
+        self.mu = nn.Parameter(torch.zeros((dim,)))
 
     def forward(self, X):
-        return torch.matmul(X, self.Wr.t())
+        preds = torch.matmul(X, self.Wr.t()) + self.mu
+        return preds
         
     def learning(self, X):
         preds = self.forward(X)
         errs = X - preds
         grad_Wr = torch.matmul(errs.T, X).fill_diagonal_(0)
+        grad_mu = torch.sum(errs, dim=0)
 
         self.Wr.grad = -grad_Wr
+        self.mu.grad = -grad_mu
 
     def inference(self, X_c):
         errs_X = X_c - self.forward(X_c)
