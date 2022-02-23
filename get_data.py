@@ -3,6 +3,43 @@ from torchvision import datasets, transforms
 from torchvision.transforms import transforms
 from torch.distributions.multivariate_normal import MultivariateNormal
 import random
+import numpy as np
+
+def cover_bottom_half(X, device):
+    size = X.shape
+    mask = torch.ones_like(X).to(device)
+    # mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
+    mask[:, size[1]//2+1:, :] -= 1
+    update_mask = torch.zeros_like(X).to(device)
+    update_mask[:, size[1]//2+1:, :] += 1
+    update_mask = update_mask.reshape(-1, size[1]*size[2])
+    X_c = (X * mask).to(device)
+    X_c = X_c.reshape(-1, size[1]*size[2])
+
+    return X_c, update_mask
+
+def cover_center(X, cover_size, device):
+    size = X.shape
+    mask = torch.ones_like(X).to(device)
+    mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
+    update_mask = torch.zeros_like(X).to(device)
+    update_mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] += 1
+    update_mask = update_mask.reshape(-1, size[1]*size[2])
+    X_c = (X * mask).to(device)
+    X_c = X_c.reshape(-1, size[1]*size[2])
+
+    return X_c, update_mask
+
+def add_gaussian_noise(X, var, device):
+    size = X.shape
+    mask = (torch.randn(size) * np.sqrt(var)).to(device)
+    update_mask = torch.ones_like(X).to(device)
+    update_mask = update_mask.reshape(-1, size[1]*size[2])
+    X_c = (X + mask).to(device)
+    X_c = X_c.reshape(-1, size[1]*size[2])
+
+    return X_c, update_mask
+
 
 def create_gaussian(savepath, seed=10):
     # create random covariance matrix
@@ -25,24 +62,11 @@ def get_gaussian(datapath, sample_size, batch_size, seed, device):
         train = train[random.sample(range(len(train)), sample_size)] # size, 5, 5
     
     X = torch.tensor(train)
-    # create the corrupted version
-    size = X.shape
-    mask = torch.ones_like(X).to(device)
-    # mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
-    mask[:, size[1]//2+1:, :] -= 1
-    update_mask = torch.zeros_like(X).to(device)
-    update_mask[:, size[1]//2+1:, :] += 1
-    update_mask = update_mask.reshape(-1, size[1]*size[2])
 
-    X_c = (X * mask).to(device) # size, 5, 5
-
-    X = X.reshape(-1, size[1]*size[2]) # size, 25
-    X_c = X_c.reshape(-1, size[1]*size[2]) # size, 25
-
-    return X, X_c, update_mask
+    return X
 
 
-def get_mnist(datapath, sample_size, batch_size, seed, cover_size, device, classes=None):
+def get_mnist(datapath, sample_size, batch_size, seed, device, classes=None):
     # classes: a list of specific class to sample from
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -66,24 +90,10 @@ def get_mnist(datapath, sample_size, batch_size, seed, cover_size, device, class
         X.append(data)
     X = torch.cat(X, dim=0).squeeze().to(device) # size, 28, 28
 
-    # create the corrupted version
-    size = X.shape
-    mask = torch.ones_like(X).to(device)
-    # mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
-    mask[:, size[1]//2:, :] -= 1
-    update_mask = torch.zeros_like(X).to(device)
-    update_mask[:, size[1]//2:, :] += 1
-    update_mask = update_mask.reshape(-1, 28**2)
-
-    X_c = (X * mask).to(device) # size, 28, 28
-
-    X = X.reshape(-1, 28**2) # size, 784
-    X_c = X_c.reshape(-1, 28**2) # size, 784
-
-    return X, X_c, update_mask
+    return X
 
 
-def get_cifar10(datapath, sample_size, batch_size, seed, cover_size, device, classes=None):
+def get_cifar10(datapath, sample_size, batch_size, seed, device, classes=None):
     transform = transforms.Compose([
         transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
@@ -106,23 +116,10 @@ def get_cifar10(datapath, sample_size, batch_size, seed, cover_size, device, cla
         X.append(data)
     X = torch.cat(X, dim=0).squeeze().to(device) # size, 32, 32
 
-    # create the corrupted version
-    size = X.shape
-    mask = torch.ones_like(X).to(device)
-    mask[:, size[1]//2:, :] -= 1
-    update_mask = torch.zeros_like(X).to(device)
-    update_mask[:, size[1]//2:, :] += 1
-    update_mask = update_mask.reshape(-1, 32**2)
-
-    X_c = (X * mask).to(device) # size, 32, 32
-
-    X = X.reshape(-1, 32**2) # size, 1024
-    X_c = X_c.reshape(-1, 32**2) # size, 1024
-
-    return X, X_c, update_mask
+    return X
 
 
-def get_fashionMNIST(datapath, sample_size, batch_size, seed, cover_size, device, classes=None):
+def get_fashionMNIST(datapath, sample_size, batch_size, seed, device, classes=None):
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
@@ -145,18 +142,4 @@ def get_fashionMNIST(datapath, sample_size, batch_size, seed, cover_size, device
         X.append(data)
     X = torch.cat(X, dim=0).squeeze().to(device) # size, 28, 28
 
-    # create the corrupted version
-    size = X.shape
-    mask = torch.ones_like(X).to(device)
-    # mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
-    mask[:, size[1]//2:, :] -= 1
-    update_mask = torch.zeros_like(X).to(device)
-    update_mask[:, size[1]//2:, :] += 1
-    update_mask = update_mask.reshape(-1, 28**2)
-
-    X_c = (X * mask).to(device) # size, 28, 28
-
-    X = X.reshape(-1, 28**2) # size, 784
-    X_c = X_c.reshape(-1, 28**2) # size, 784
-
-    return X, X_c, update_mask
+    return X
