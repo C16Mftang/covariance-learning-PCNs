@@ -4,6 +4,28 @@ import numpy as np
 import torch.nn.functional as F
 import utils
 
+class FristonPCN(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+        # initialize parameters
+        self.S = nn.Parameter(torch.eye(dim))
+
+    def forward(self, X):
+        return X
+
+    def learning(self, X):
+        errs = torch.matmul(self.forward(X), torch.linalg.inv(self.S).T)
+        grad_S = 0.5 * (torch.matmul(errs.T, errs) / X.shape[0] - torch.linalg.inv(self.S))
+
+        self.S.grad = -grad_S
+
+    def inference(self, X_c):
+        errs_X = torch.matmul(self.forward(X_c), torch.linalg.inv(self.S).T)
+        delta_X = -errs_X
+
+        return delta_X
+
 class RecPCN(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -113,7 +135,7 @@ class HierarchicalPCN(nn.Module):
         self.set_nodes(corrupt_inp)
         self.update_val_nodes(n_iters, recon=True)
 
-        return self.preds[-1]
+        return self.val_nodes[-1]
 
 
 class AutoEncoder(nn.Module):
