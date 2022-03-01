@@ -15,7 +15,7 @@ if artificial_data:
     mean = np.array([0,0])
     cov = np.array([[1,0.5],
                     [0.5,1]])
-    np.random.seed(10)
+    np.random.seed(20)
     X = np.random.multivariate_normal(mean, cov, size=sample_size)
     X_c = X * np.concatenate([np.ones((sample_size,1))]+[np.zeros((sample_size,1))]*(dim-1), axis=1)
     update_mask = np.concatenate([np.zeros((sample_size,1))]+[np.ones((sample_size,1))]*(dim-1), axis=1)
@@ -79,7 +79,7 @@ def memory_Friston(batch_size, training_lr):
         mse_F.append(np.mean((X[:,1] - X_recon_F[:,1])**2)) 
     # print("Learned covariance using Friston's update:\n", F_cov)
 
-    return mse_F, covs, X_recon_F
+    return mse_F, F_cov, X_recon_F
 
 
 def memory_Rafal(batch_size, training_lr):
@@ -113,7 +113,7 @@ def memory_Rafal(batch_size, training_lr):
     return mse_R, covs, X_recon_R
 
 
-def memory_rec(batch_size, training_lr):
+def memory_rec(batch_size, training_lr, dendrite=True):
     # relaxation using the learned weights by recurrent PCN
     ## learning the weights
     # weights = np.random.normal(0, 0.05, (2,2))
@@ -133,9 +133,11 @@ def memory_rec(batch_size, training_lr):
         X_recon_rec = X_c
         for i in range(relaxation_iters):
             errsX_rec = X_recon_rec - np.matmul(X_recon_rec, weights.T)
-            delta = -errsX_rec
-            if fix_intact:
-                X_recon_rec += relaxation_lr * (delta * update_mask)
+            if dendrite:
+                delta = -errsX_rec
+            else:
+                delta = -errsX_rec + np.matmul(errsX_rec, weights)
+            X_recon_rec += relaxation_lr * (delta * update_mask)
         mse_rec.append(np.mean((X[:,1] - X_recon_rec[:,1])**2))
     # print("Learned weight matrix by rec PCN:\n", weights)
 
@@ -235,7 +237,25 @@ def plot_smth():
     ax[1].set_ylabel('MSE')
     ax[1].set_title(r'MSE($\Vert X_{original} - X_{retrieved} \Vert^2$)')
     ax[1].legend()
-    plt.savefig('./figs/seed20', dpi=200)
+    # plt.savefig('./figs/seed20', dpi=200)
+    plt.show()
+
+def plot_equivalence():
+    mse_F, covs_F, X_recon_F = memory_Friston(1, 0.001)
+    mse_rec, covs_rec, X_recon_rec = memory_rec(1, 0.001, dendrite=False)
+    mse_d, covs_d, X_recon_d = memory_rec(1, 0.001, dendrite=True)
+    ML_cov = np.cov(X.T)
+    fig, ax = plt.subplots(1, 1, figsize=(8,4))
+    ax.scatter(X[:,0], X[:,1], alpha=0.4, color='gray', label='Data')
+    ax.plot(X[:,0], X_recon_F[:,1], label='Covariance model', lw=3.5)
+    ax.plot(X[:,0], X_recon_rec[:,1], label='Recurrent model', lw=3)
+    ax.plot(X[:,0], X_recon_d[:,1], label='Dendritic model', lw=2.5)
+    ax.plot(X[:,0], (ML_cov[0,1]/ML_cov[1,1])*X[:,0], label=r'$\Sigma_{12}/\Sigma_{22}$')
+    ax.set_xlabel('x1')
+    ax.set_ylabel('x2')
+    ax.legend()
+    # ax.set_title(r'Linear prediction of $x_2$ from $x_1$')
+    plt.savefig('./figs/gaussian2', dpi=400)
     plt.show()
 
 def plot_mse():
@@ -253,8 +273,25 @@ def plot_mse():
     plt.savefig('./figs/unstable_mse', dpi=200)
     plt.show()
 
+def plot_mats():
+    mse_F, ws_F, X_recon_F = memory_Friston(1, 0.001)
+    mse_rec, ws_rec, X_recon_rec = memory_rec(1, 0.001, dendrite=False)
+    mse_d, ws_d, X_recon_d = memory_rec(1, 0.001, dendrite=True)
+    ML_cov = np.cov(X.T)
+
+    fig, ax = plt.subplots(1, 3)
+    ax[0].imshow(ML_cov, vmin=0, vmax=1)
+    ax[1].imshow(ws_F, vmin=0, vmax=1)
+    im = ax[2].imshow(ws_rec, vmin=0, vmax=1)
+    for i in range(3):
+        ax[i].axis('off') 
+    fig.colorbar(im, ax=ax.ravel().tolist(), shrink=0.3)
+    plt.savefig('./figs/covmats_gaussian2', dpi=400)
+    plt.show()
+
+
 def main():
-    plot_mse()
+    plot_mats()
     
 
 if __name__ == '__main__':

@@ -27,9 +27,10 @@ class FristonPCN(nn.Module):
         return delta_X
 
 class RecPCN(nn.Module):
-    def __init__(self, dim):
+    def __init__(self, dim, dendrite=True):
         super().__init__()
         self.dim = dim
+        self.dendrite = dendrite
         # initialize parameters
         bound = 1. / np.sqrt(dim)
         self.Wr = nn.Parameter(torch.zeros((dim, dim)))
@@ -50,7 +51,7 @@ class RecPCN(nn.Module):
 
     def inference(self, X_c):
         errs_X = X_c - self.forward(X_c)
-        delta_X = -errs_X
+        delta_X = -errs_X if self.dendrite else (-errs_X + torch.matmul(errs_X, self.Wr))
 
         return delta_X
 

@@ -8,7 +8,6 @@ import numpy as np
 def cover_bottom_half(X, device):
     size = X.shape
     mask = torch.ones_like(X).to(device)
-    # mask[:, (size[1]-cover_size)//2:(size[1]+cover_size)//2, (size[2]-cover_size)//2:(size[2]+cover_size)//2] -= 1
     mask[:, size[1]//2+1:, :] -= 1
     update_mask = torch.zeros_like(X).to(device)
     update_mask[:, size[1]//2+1:, :] += 1
@@ -66,7 +65,7 @@ def get_gaussian(datapath, sample_size, batch_size, seed, device):
     return X
 
 
-def get_mnist(datapath, sample_size, batch_size, seed, device, classes=None):
+def get_mnist(datapath, sample_size, sample_size_test, batch_size, seed, device, classes=None):
     # classes: a list of specific class to sample from
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -81,6 +80,8 @@ def get_mnist(datapath, sample_size, batch_size, seed, device, classes=None):
     if sample_size != len(train):
         random.seed(seed)
         train = torch.utils.data.Subset(train, random.sample(range(len(train)), sample_size))
+    random.seed(seed)
+    test = torch.utils.data.Subset(test, random.sample(range(len(test)), sample_size_test))
 
     train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test, batch_size=batch_size, shuffle=False)
@@ -90,10 +91,15 @@ def get_mnist(datapath, sample_size, batch_size, seed, device, classes=None):
         X.append(data)
     X = torch.cat(X, dim=0).squeeze().to(device) # size, 28, 28
 
-    return X
+    X_test = []
+    for batch_idx, (data, targ) in enumerate(test_loader):
+        X_test.append(data)
+    X_test = torch.cat(X_test, dim=0).squeeze().to(device) # size, 28, 28
+
+    return X, X_test
 
 
-def get_cifar10(datapath, sample_size, batch_size, seed, device, classes=None):
+def get_cifar10(datapath, sample_size, sample_size_test, batch_size, seed, device, classes=None):
     transform = transforms.Compose([
         transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
@@ -108,6 +114,9 @@ def get_cifar10(datapath, sample_size, batch_size, seed, device, classes=None):
     if sample_size != len(train):
         random.seed(seed)
         train = torch.utils.data.Subset(train, random.sample(range(len(train)), sample_size))
+    random.seed(seed)
+    test = torch.utils.data.Subset(test, random.sample(range(len(test)), sample_size_test))
+
     train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test, batch_size=batch_size, shuffle=False)
 
@@ -116,7 +125,12 @@ def get_cifar10(datapath, sample_size, batch_size, seed, device, classes=None):
         X.append(data)
     X = torch.cat(X, dim=0).squeeze().to(device) # size, 32, 32
 
-    return X
+    X_test = []
+    for batch_idx, (data, targ) in enumerate(test_loader):
+        X_test.append(data)
+    X_test = torch.cat(X_test, dim=0).squeeze().to(device) # size, 32, 32
+
+    return X, X_test
 
 
 def get_fashionMNIST(datapath, sample_size, batch_size, seed, device, classes=None):
