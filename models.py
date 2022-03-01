@@ -116,6 +116,7 @@ class HierarchicalPCN(nn.Module):
                 delta = -self.errs[l] + derivative * torch.matmul(self.errs[l+1], self.layers[l].weight)
                 self.val_nodes[l] = self.val_nodes[l] + self.Dt * delta
             if recon:
+                # relax sensory layer value nodes if its corrupted (during reconstruction phase)
                 delta_sensory = -self.errs[-1] * self.update_mask
                 self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * delta_sensory
 
@@ -124,6 +125,98 @@ class HierarchicalPCN(nn.Module):
     def update_grads(self):
         for l in range(self.n_layers-1):
             self.memory.grad = -torch.sum(self.errs[0], axis=0)
+            grad_w = -torch.matmul(self.errs[l+1].t(), self.nonlins[l](self.val_nodes[l]))
+            self.layers[l].weight.grad = grad_w
+            if self.use_bias:
+                self.layers[l].bias.grad = -torch.sum(self.errs[l+1], axis=0)
+
+    def train_pc_generative(self, batch_inp, n_iters):
+        self.initialize()
+        self.set_nodes(batch_inp)
+        self.update_val_nodes(n_iters)
+        self.update_grads()
+
+    def test_pc_generative(self, corrupt_inp, n_iters):
+        self.initialize()
+        self.set_nodes(corrupt_inp)
+        self.update_val_nodes(n_iters, recon=True)
+
+        return self.val_nodes[-1]
+
+
+class HybridPCN(nn.Module):
+    def __init__(self, nodes, nonlin, Dt, update_mask, use_bias=False):
+        super().__init__()
+        self.n_layers = len(nodes)
+        self.layers = nn.Sequential()
+        for l in range(self.n_layers-1):
+            self.layers.add_module(f'layer_{l}', nn.Linear(
+                in_features=nodes[l],
+                out_features=nodes[l+1],
+                bias=use_bias,
+            ))
+
+        self.mem_dim = nodes[0]
+        self.Wr = nn.Parameter(torch.zeros((nodes[0], nodes[0])))
+        self.mu = nn.Parameter(torch.zeros((nodes[0],)))
+        self.Dt = Dt
+
+        if nonlin == 'Tanh':
+            nonlin = utils.Tanh()
+        elif nonlin == 'ReLU':
+            nonlin = utils.ReLU()
+        self.nonlins = [nonlin] * (self.n_layers - 1)
+        self.use_bias = use_bias
+        self.update_mask = update_mask
+
+    def initialize(self):
+        self.val_nodes = [[] for _ in range(self.n_layers)]
+        self.preds = [[] for _ in range(self.n_layers)]
+        self.errs = [[] for _ in range(self.n_layers)]
+
+    def forward(self):
+        val = self.memory.clone().detach()
+        for l in range(self.n_layers-1):
+            val = self.layers[l](self.nonlins[l](val))
+        return val
+
+    def update_err_nodes(self):
+        for l in range(0, self.n_layers):
+            if l == 0:
+                self.preds[l] = self.mu.clone().detach() + torch.matmul(self.val_nodes[l], self.Wr.t())
+            else:
+                self.preds[l] = self.layers[l-1](self.nonlins[l-1](self.val_nodes[l-1]))
+            self.errs[l] = self.val_nodes[l] - self.preds[l]
+
+    def set_nodes(self, batch_inp):
+        # computing val nodes
+        self.val_nodes[0] = self.mu.clone().detach()
+        for l in range(1, self.n_layers-1):
+            self.val_nodes[l] = self.layers[l-1](self.nonlins[l-1](self.val_nodes[l-1]))
+        self.val_nodes[-1] = batch_inp.clone()
+
+        # computing error nodes
+        self.update_err_nodes()
+
+    def update_val_nodes(self, n_iters, recon=False):
+        for itr in range(n_iters):
+
+            for l in range(0, self.n_layers-1):
+                derivative = self.nonlins[l].deriv(self.val_nodes[l])
+                delta = -self.errs[l] + derivative * torch.matmul(self.errs[l+1], self.layers[l].weight)
+                self.val_nodes[l] = self.val_nodes[l] + self.Dt * delta
+            if recon:
+                # relax sensory layer value nodes if its corrupted (during reconstruction phase)
+                delta_sensory = -self.errs[-1] * self.update_mask
+                self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * delta_sensory
+
+            self.update_err_nodes()
+
+    def update_grads(self):
+        self.mu.grad = -torch.sum(self.errs[0], axis=0)
+        self.Wr.grad = -torch.matmul(self.errs[0].t(), self.val_nodes[0]).fill_diagonal_(0)
+
+        for l in range(self.n_layers-1):
             grad_w = -torch.matmul(self.errs[l+1].t(), self.nonlins[l](self.val_nodes[l]))
             self.layers[l].weight.grad = grad_w
             if self.use_bias:
