@@ -5,12 +5,12 @@ from torch.distributions.multivariate_normal import MultivariateNormal
 import random
 import numpy as np
 
-def cover_bottom_half(X, device):
+def cover_bottom(X, divisor, device):
     size = X.shape
     mask = torch.ones_like(X).to(device)
-    mask[:, size[1]//2+1:, :] -= 1
+    mask[:, size[1]//divisor+1:, :] -= 1
     update_mask = torch.zeros_like(X).to(device)
-    update_mask[:, size[1]//2+1:, :] += 1
+    update_mask[:, size[1]//divisor+1:, :] += 1
     update_mask = update_mask.reshape(-1, size[1]*size[2])
     X_c = (X * mask).to(device)
     X_c = X_c.reshape(-1, size[1]*size[2])

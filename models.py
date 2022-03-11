@@ -48,6 +48,7 @@ class RecPCN(nn.Module):
 
         self.Wr.grad = -grad_Wr
         self.mu.grad = -grad_mu
+        self.train_mse = torch.mean(errs**2)
 
     def inference(self, X_c):
         errs_X = X_c - self.forward(X_c)
@@ -145,7 +146,7 @@ class HierarchicalPCN(nn.Module):
 
 
 class HybridPCN(nn.Module):
-    def __init__(self, nodes, nonlin, Dt, update_mask, use_bias=False):
+    def __init__(self, nodes, nonlin, Dt, use_bias=False):
         super().__init__()
         self.n_layers = len(nodes)
         self.layers = nn.Sequential()
@@ -167,7 +168,6 @@ class HybridPCN(nn.Module):
             nonlin = utils.ReLU()
         self.nonlins = [nonlin] * (self.n_layers - 1)
         self.use_bias = use_bias
-        self.update_mask = update_mask
 
     def initialize(self):
         self.val_nodes = [[] for _ in range(self.n_layers)]
@@ -198,17 +198,18 @@ class HybridPCN(nn.Module):
         # computing error nodes
         self.update_err_nodes()
 
-    def update_val_nodes(self, n_iters, recon=False):
+    def update_val_nodes(self, n_iters, update_mask, recon=False):
         for itr in range(n_iters):
-
             for l in range(0, self.n_layers-1):
                 derivative = self.nonlins[l].deriv(self.val_nodes[l])
                 delta = -self.errs[l] + derivative * torch.matmul(self.errs[l+1], self.layers[l].weight)
                 self.val_nodes[l] = self.val_nodes[l] + self.Dt * delta
             if recon:
                 # relax sensory layer value nodes if its corrupted (during reconstruction phase)
-                delta_sensory = -self.errs[-1] * self.update_mask
-                self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * delta_sensory
+                self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * (-self.errs[-1] * update_mask)
+            
+            del delta
+            del derivative
 
             self.update_err_nodes()
 
@@ -222,16 +223,16 @@ class HybridPCN(nn.Module):
             if self.use_bias:
                 self.layers[l].bias.grad = -torch.sum(self.errs[l+1], axis=0)
 
-    def train_pc_generative(self, batch_inp, n_iters):
+    def train_pc_generative(self, batch_inp, n_iters, update_mask):
         self.initialize()
         self.set_nodes(batch_inp)
-        self.update_val_nodes(n_iters)
+        self.update_val_nodes(n_iters, update_mask)
         self.update_grads()
 
-    def test_pc_generative(self, corrupt_inp, n_iters):
+    def test_pc_generative(self, corrupt_inp, n_iters, update_mask):
         self.initialize()
         self.set_nodes(corrupt_inp)
-        self.update_val_nodes(n_iters, recon=True)
+        self.update_val_nodes(n_iters, update_mask, recon=True)
 
         return self.val_nodes[-1]
 
