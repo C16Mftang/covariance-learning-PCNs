@@ -6,14 +6,14 @@ import random
 import numpy as np
 
 def cover_bottom(X, divisor, device):
-    size = X.shape
+    size = X.shape # 10, 3, 32, 32
     mask = torch.ones_like(X).to(device)
-    mask[:, size[1]//divisor+1:, :] -= 1
+    mask[:, :, size[-2]//divisor+1:, :] -= 1
     update_mask = torch.zeros_like(X).to(device)
-    update_mask[:, size[1]//divisor+1:, :] += 1
-    update_mask = update_mask.reshape(-1, size[1]*size[2])
+    update_mask[:, :, size[-2]//divisor+1:, :] += 1
+    update_mask = update_mask.reshape(-1, size[-1]*size[-2]*size[-3])
     X_c = (X * mask).to(device)
-    X_c = X_c.reshape(-1, size[1]*size[2])
+    X_c = X_c.reshape(-1, size[-1]*size[-2]*size[-3])
 
     return X_c, update_mask
 
@@ -33,9 +33,9 @@ def add_gaussian_noise(X, var, device):
     size = X.shape
     mask = (torch.randn(size) * np.sqrt(var)).to(device)
     update_mask = torch.ones_like(X).to(device)
-    update_mask = update_mask.reshape(-1, size[1]*size[2])
+    update_mask = update_mask.reshape(-1, size[-1]*size[-2]*size[-3])
     X_c = (X + mask).to(device)
-    X_c = X_c.reshape(-1, size[1]*size[2])
+    X_c = X_c.reshape(-1, size[-1]*size[-2]*size[-3])
 
     return X_c, update_mask
 
@@ -89,26 +89,27 @@ def get_mnist(datapath, sample_size, sample_size_test, batch_size, seed, device,
     X = []
     for batch_idx, (data, targ) in enumerate(train_loader):
         X.append(data)
-    X = torch.cat(X, dim=0).squeeze().to(device) # size, 28, 28
+    X = torch.cat(X, dim=0).to(device) # size, 28, 28
 
     X_test = []
     for batch_idx, (data, targ) in enumerate(test_loader):
         X_test.append(data)
-    X_test = torch.cat(X_test, dim=0).squeeze().to(device) # size, 28, 28
+    X_test = torch.cat(X_test, dim=0).to(device) # size, 28, 28
 
+    print(X.shape)
     return X, X_test
 
 
 def get_cifar10(datapath, sample_size, sample_size_test, batch_size, seed, device, classes=None):
     transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=1),
+        # transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
     ])
     train = datasets.CIFAR10(datapath, train=True, transform=transform, download=True)
     test = datasets.CIFAR10(datapath, train=False, transform=transform, download=True)
     
      # subsetting data based on sample size and number of classes
-    idx = sum(train.targets == c for c in classes).bool() if classes else range(len(train))
+    idx = sum(torch.tensor(train.targets) == c for c in classes).bool() if classes else range(len(train))
     train.targets = torch.tensor(train.targets)[idx]
     train.data = train.data[idx]
     if sample_size != len(train):
@@ -123,12 +124,12 @@ def get_cifar10(datapath, sample_size, sample_size_test, batch_size, seed, devic
     X = []
     for batch_idx, (data, targ) in enumerate(train_loader):
         X.append(data)
-    X = torch.cat(X, dim=0).squeeze().to(device) # size, 32, 32
+    X = torch.cat(X, dim=0).to(device) # size, c, 32, 32
 
     X_test = []
     for batch_idx, (data, targ) in enumerate(test_loader):
         X_test.append(data)
-    X_test = torch.cat(X_test, dim=0).squeeze().to(device) # size, 32, 32
+    X_test = torch.cat(X_test, dim=0).to(device) # size, c, 32, 32
 
     return X, X_test
 

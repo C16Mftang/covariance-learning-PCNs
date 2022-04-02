@@ -15,7 +15,7 @@ if artificial_data:
     mean = np.array([0,0])
     cov = np.array([[1,0.5],
                     [0.5,1]])
-    np.random.seed(20)
+    np.random.seed(10)
     X = np.random.multivariate_normal(mean, cov, size=sample_size)
     X_c = X * np.concatenate([np.ones((sample_size,1))]+[np.zeros((sample_size,1))]*(dim-1), axis=1)
     update_mask = np.concatenate([np.zeros((sample_size,1))]+[np.ones((sample_size,1))]*(dim-1), axis=1)
@@ -247,10 +247,10 @@ def plot_equivalence():
     ML_cov = np.cov(X.T)
     fig, ax = plt.subplots(1, 1, figsize=(8,4))
     ax.scatter(X[:,0], X[:,1], alpha=0.4, color='gray', label='Data')
-    ax.plot(X[:,0], X_recon_F[:,1], label='Covariance model', lw=3.5)
-    ax.plot(X[:,0], X_recon_rec[:,1], label='Recurrent model', lw=3)
+    ax.plot(X[:,0], X_recon_F[:,1], label='Explicit model', lw=3.5)
+    ax.plot(X[:,0], X_recon_rec[:,1], label='Implicit model', lw=3)
     ax.plot(X[:,0], X_recon_d[:,1], label='Dendritic model', lw=2.5)
-    ax.plot(X[:,0], (ML_cov[0,1]/ML_cov[1,1])*X[:,0], label=r'$\Sigma_{12}/\Sigma_{22}$')
+    ax.plot(X[:,0], (ML_cov[0,1]/ML_cov[1,1])*X[:,0], label=r'$\Sigma_{21}/\Sigma_{11}$')
     ax.set_xlabel('x1')
     ax.set_ylabel('x2')
     ax.legend()
@@ -291,7 +291,7 @@ def plot_mats():
 
 
 def main():
-    plot_mats()
+    plot_equivalence()
     
 
 if __name__ == '__main__':
