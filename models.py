@@ -4,7 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 import utils
 
-class FristonPCN(nn.Module):
+class ExplicitPCN(nn.Module):
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
@@ -32,7 +32,6 @@ class RecPCN(nn.Module):
         self.dim = dim
         self.dendrite = dendrite
         # initialize parameters
-        bound = 1. / np.sqrt(dim)
         self.Wr = nn.Parameter(torch.zeros((dim, dim)))
         self.mu = nn.Parameter(torch.zeros((dim,)))
 
@@ -138,12 +137,15 @@ class HierarchicalPCN(nn.Module):
         self.update_val_nodes(n_iters, update_mask)
         self.update_grads()
 
-    def test_pc_generative(self, corrupt_inp, n_iters, update_mask):
+    def test_pc_generative(self, corrupt_inp, n_iters, update_mask, sensory=True):
         self.initialize()
         self.set_nodes(corrupt_inp)
         self.update_val_nodes(n_iters, update_mask, recon=True)
 
-        return self.val_nodes[-1]
+        if sensory:
+            return self.val_nodes[-1]
+        else:
+            return self.preds[-1]
 
 
 class HybridPCN(nn.Module):
@@ -230,12 +232,15 @@ class HybridPCN(nn.Module):
         self.update_val_nodes(n_iters, update_mask)
         self.update_grads()
 
-    def test_pc_generative(self, corrupt_inp, n_iters, update_mask):
+    def test_pc_generative(self, corrupt_inp, n_iters, update_mask, sensory=True):
         self.initialize()
         self.set_nodes(corrupt_inp)
         self.update_val_nodes(n_iters, update_mask, recon=True)
 
-        return self.val_nodes[-1]
+        if sensory:
+            return self.val_nodes[-1]
+        else:
+            return self.preds[-1]
 
 
 class AutoEncoder(nn.Module):
