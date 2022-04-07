@@ -14,20 +14,20 @@ print(device)
 
 # training parameters
 sample_size = 500
-inference_lr = 0.03 # could be more fine-tuned for each model
+inference_lr = 0.1 # could be more fine-tuned for each model
 training_lr = 0.0001 # could be more fine-tuned for each model
 training_iters = 100
 inference_iters = 100
 batch_size = 1
 dim = 2
 
-X, X_c, update_mask = get_2d_gaussian(sample_size)
+X, X_c, update_mask = get_2d_gaussian(sample_size, device)
 explicit_model = ExplicitPCN(dim).to(device)
-optimizer_ex = torch.optim.Adam(explicit_model.parameters(), lr=training_lr)
+optimizer_ex = torch.optim.SGD(explicit_model.parameters(), lr=training_lr)
 implicit_model = RecPCN(dim, dendrite=False).to(device)
-optimizer_im = torch.optim.Adam(implicit_model.parameters(), lr=training_lr)
+optimizer_im = torch.optim.SGD(implicit_model.parameters(), lr=training_lr)
 dendritic_model = RecPCN(dim, dendrite=True).to(device)
-optimizer_den = torch.optim.Adam(dendritic_model.parameters(), lr=training_lr)
+optimizer_den = torch.optim.SGD(dendritic_model.parameters(), lr=training_lr)
 # sample covariance matrix
 ML_cov = cov(X)
 
@@ -54,6 +54,8 @@ X_recon_im = memory_retrieval(implicit_model, optimizer_im).detach().cpu().numpy
 X_recon_den = memory_retrieval(dendritic_model, optimizer_den).detach().cpu().numpy()
 
 X = X.detach().cpu().numpy()
+# plot the learned weight matrices
+ML_cov = ML_cov.cpu().detach().numpy()
 
 # plot the learned linear retrievals
 plt.figure()
@@ -69,8 +71,6 @@ plt.legend()
 # plt.savefig('./figs/gaussian2', dpi=400)
 plt.show()
 
-# plot the learned weight matrices
-ML_cov = ML_cov.cpu().detach().numpy()
 W_ex = explicit_model.S.cpu().detach().numpy()
 W_im = implicit_model.Wr.cpu().detach().numpy()
 
