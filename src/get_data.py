@@ -40,7 +40,7 @@ def add_gaussian_noise(X, var, device):
     return X_c, update_mask
 
 
-def get_2d_gaussian(sample_size):
+def get_2d_gaussian(sample_size, device):
     dim = 2
     # simulation data
     mean = np.array([0,0])
@@ -51,9 +51,9 @@ def get_2d_gaussian(sample_size):
     X_c = X * np.concatenate([np.ones((sample_size,1))]+[np.zeros((sample_size,1))]*(dim-1), axis=1)
     update_mask = np.concatenate([np.zeros((sample_size,1))]+[np.ones((sample_size,1))]*(dim-1), axis=1)
 
-    X = torch.tensor(X).float()
-    X_c = torch.tensor(X_c).float()
-    update_mask = torch.tensor(update_mask).float()
+    X = torch.tensor(X).float().to(device)
+    X_c = torch.tensor(X_c).float().to(device)
+    update_mask = torch.tensor(update_mask).float().to(device)
 
     return X, X_c, update_mask
 
