@@ -104,18 +104,22 @@ def get_mnist(datapath, sample_size, sample_size_test, batch_size, seed, device,
     train_loader = torch.utils.data.DataLoader(train, batch_size=batch_size, shuffle=False)
     test_loader = torch.utils.data.DataLoader(test, batch_size=batch_size, shuffle=False)
 
-    X = []
+    X, y = [], []
     for batch_idx, (data, targ) in enumerate(train_loader):
         X.append(data)
+        y.append(targ)
     X = torch.cat(X, dim=0).to(device) # size, 28, 28
+    y = torch.cat(y, dim=0).to(device)
 
-    X_test = []
+    X_test, y_test = [], []
     for batch_idx, (data, targ) in enumerate(test_loader):
         X_test.append(data)
+        y_test.append(targ)
     X_test = torch.cat(X_test, dim=0).to(device) # size, 28, 28
+    y_test = torch.cat(y_test, dim=0).to(device)
 
     print(X.shape)
-    return X, X_test
+    return (X, y), (X_test, y_test)
 
 
 def get_cifar10(datapath, sample_size, sample_size_test, batch_size, seed, device, classes=None):
