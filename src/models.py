@@ -54,6 +54,7 @@ class RecPCN(nn.Module):
         delta_X = -errs_X if self.dendrite else (-errs_X + torch.matmul(errs_X, self.Wr))
 
         return delta_X
+        
 
 class MultilayerPCN(nn.Module):
     def __init__(self, nodes, nonlin, Dt, lamb=0, use_bias=False):
@@ -136,9 +137,11 @@ class MultilayerPCN(nn.Module):
         else:
             return self.preds[-1]
     
+    
 class HierarchicalPCN(MultilayerPCN):
-    def __init__(self, nodes, nonlin, Dt, lamb=0, use_bias=False):
+    def __init__(self, nodes, nonlin, Dt, init_std=0., lamb=0, use_bias=False):
         super().__init__(nodes, nonlin, Dt, lamb, use_bias)
+        self.memory = nn.Parameter(init_std * torch.randn((self.mem_dim,)))
 
     def update_err_nodes(self):
         for l in range(0, self.n_layers):
@@ -158,9 +161,10 @@ class HierarchicalPCN(MultilayerPCN):
 
 
 class HybridPCN(MultilayerPCN):
-    def __init__(self, nodes, nonlin, Dt, lamb=0, use_bias=False):
+    def __init__(self, nodes, nonlin, Dt, init_std=0., init_std_Wr=0., lamb=0, use_bias=False):
         super().__init__(nodes, nonlin, Dt, lamb, use_bias)
-        self.Wr = nn.Parameter(torch.zeros((nodes[0], nodes[0])))
+        self.memory = nn.Parameter(init_std * torch.randn((self.mem_dim,)))
+        self.Wr = nn.Parameter(init_std_Wr * torch.randn((self.mem_dim, self.mem_dim)))
 
     def update_err_nodes(self):
         for l in range(0, self.n_layers):
