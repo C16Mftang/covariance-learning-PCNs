@@ -104,19 +104,18 @@ class MultilayerPCN(nn.Module):
         # computing error nodes
         self.update_err_nodes()
 
-    def update_val_nodes(self, n_iters, update_mask, recon=False):
+    def update_val_nodes(self, update_mask, recon=False):
         with torch.no_grad():
-            for itr in range(n_iters):
-                for l in range(0, self.n_layers-1):
-                    derivative = self.nonlins[l].deriv(self.val_nodes[l])
-                    penalty = self.lamb if l == 0 else 0.
-                    delta = -self.errs[l] - penalty * torch.sign(self.val_nodes[l]) + derivative * torch.matmul(self.errs[l+1], self.layers[l].weight)
-                    self.val_nodes[l] = self.val_nodes[l] + self.Dt * delta
-                if recon:
-                    # relax sensory layer value nodes if its corrupted (during reconstruction phase)
-                    self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * (-self.errs[-1] * update_mask)
+            for l in range(0, self.n_layers-1):
+                derivative = self.nonlins[l].deriv(self.val_nodes[l])
+                penalty = self.lamb if l == 0 else 0.
+                delta = -self.errs[l] - penalty * torch.sign(self.val_nodes[l]) + derivative * torch.matmul(self.errs[l+1], self.layers[l].weight)
+                self.val_nodes[l] = self.val_nodes[l] + self.Dt * delta
+            if recon:
+                # relax sensory layer value nodes if its corrupted (during reconstruction phase)
+                self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * (-self.errs[-1] * update_mask)
 
-                self.update_err_nodes()
+            self.update_err_nodes()
 
     def update_grads(self):
         raise NotImplementedError()
@@ -124,13 +123,15 @@ class MultilayerPCN(nn.Module):
     def train_pc_generative(self, batch_inp, n_iters, update_mask):
         self.initialize()
         self.set_nodes(batch_inp)
-        self.update_val_nodes(n_iters, update_mask)
+        for itr in range(n_iters):
+            self.update_val_nodes(update_mask)
         self.update_grads()
 
     def test_pc_generative(self, corrupt_inp, n_iters, update_mask, sensory=True):
         self.initialize()
         self.set_nodes(corrupt_inp)
-        self.update_val_nodes(n_iters, update_mask, recon=True)
+        for itr in range(n_iters):
+            self.update_val_nodes(update_mask, recon=True)
 
         if sensory:
             return self.val_nodes[-1]

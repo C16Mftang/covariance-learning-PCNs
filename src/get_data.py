@@ -44,8 +44,8 @@ def get_2d_gaussian(sample_size, device):
     dim = 2
     # simulation data
     mean = np.array([0,0])
-    cov = np.array([[1,0.5],
-                    [0.5,1]])
+    cov = np.array([[2,1],
+                    [1,2]])
     np.random.seed(10)
     X = np.random.multivariate_normal(mean, cov, size=sample_size)
     X_c = X * np.concatenate([np.ones((sample_size,1))]+[np.zeros((sample_size,1))]*(dim-1), axis=1)
