@@ -27,7 +27,7 @@ class ExplicitPCN(nn.Module):
         return delta_X
 
 class RecPCN(nn.Module):
-    def __init__(self, dim, dendrite=True):
+    def __init__(self, dim, dendrite=True, mode='linear'):
         super().__init__()
         self.dim = dim
         self.dendrite = dendrite
@@ -35,8 +35,13 @@ class RecPCN(nn.Module):
         self.Wr = nn.Parameter(torch.zeros((dim, dim)))
         self.mu = nn.Parameter(torch.zeros((dim,)))
 
+        if mode == 'linear':
+            self.nonlin = utils.Linear()
+        elif mode == 'rate':
+            self.nonlin = utils.Sigmoid()
+
     def forward(self, X):
-        preds = torch.matmul(X, self.Wr.t()) + self.mu
+        preds = torch.matmul(self.nonlin(X), self.Wr.t()) + self.mu
         return preds
         
     def learning(self, X):

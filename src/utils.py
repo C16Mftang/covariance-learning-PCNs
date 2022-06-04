@@ -24,6 +24,14 @@ class ReLU(nn.Module):
         out[out > 0] = 1.0
         return out
 
+class Sigmoid(nn.Module):
+    def forward(self, inp):
+        return torch.sigmoid(inp)
+
+    def deriv(self, inp):
+        out = self(inp)
+        return out * (1 - out)
+
 class Linear(nn.Module):
     def forward(self, inp):
         return inp
