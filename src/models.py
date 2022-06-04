@@ -47,7 +47,7 @@ class RecPCN(nn.Module):
     def learning(self, X):
         preds = self.forward(X)
         errs = X - preds
-        grad_Wr = torch.matmul(errs.T, X).fill_diagonal_(0)
+        grad_Wr = torch.matmul(errs.T, self.nonlin(X)).fill_diagonal_(0)
         grad_mu = torch.sum(errs, dim=0)
 
         self.Wr.grad = -grad_Wr
