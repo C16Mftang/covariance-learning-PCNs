@@ -39,6 +39,8 @@ class RecPCN(nn.Module):
             self.nonlin = utils.Linear()
         elif mode == 'rate':
             self.nonlin = utils.Sigmoid()
+        elif mode == 'binary':
+            self.nonlin = utils.Binary()
 
     def forward(self, X):
         preds = torch.matmul(self.nonlin(X), self.Wr.t()) + self.mu

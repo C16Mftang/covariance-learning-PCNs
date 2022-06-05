@@ -32,6 +32,13 @@ class Sigmoid(nn.Module):
         out = self(inp)
         return out * (1 - out)
 
+class Binary(nn.Module):
+    def forward(self, inp, threshold=0.):
+        return torch.where(x > threshold, 1., 0.)
+
+    def deriv(self, inp):
+        return torch.zeros((1,))
+
 class Linear(nn.Module):
     def forward(self, inp):
         return inp
