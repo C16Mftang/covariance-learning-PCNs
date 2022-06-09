@@ -41,6 +41,8 @@ class RecPCN(nn.Module):
             self.nonlin = utils.Sigmoid()
         elif mode == 'binary':
             self.nonlin = utils.Binary()
+        else:
+            raise ValueError("no such nonlinearity!")
 
     def forward(self, X):
         preds = torch.matmul(self.nonlin(X), self.Wr.t()) + self.mu
