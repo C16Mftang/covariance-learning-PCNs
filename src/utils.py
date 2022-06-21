@@ -34,7 +34,7 @@ class Sigmoid(nn.Module):
 
 class Binary(nn.Module):
     def forward(self, inp, threshold=0.):
-        return torch.where(x > threshold, 1., 0.)
+        return torch.where(inp > threshold, 1., 0.)
 
     def deriv(self, inp):
         return torch.zeros((1,))
