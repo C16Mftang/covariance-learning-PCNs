@@ -10,18 +10,22 @@ class ExplicitPCN(nn.Module):
         self.dim = dim
         # initialize parameters
         self.S = nn.Parameter(torch.eye(dim))
+        self.mu = nn.Parameter(torch.zeros((dim,)))
 
     def forward(self, X):
         return X
 
     def learning(self, X):
-        errs = torch.matmul(self.forward(X), torch.linalg.inv(self.S).T)
+        errs = torch.matmul(self.forward(X) - self.mu, torch.linalg.inv(self.S).T)
         grad_S = 0.5 * (torch.matmul(errs.T, errs) / X.shape[0] - torch.linalg.inv(self.S))
+        grad_mu = torch.sum(errs, dim=0)
 
         self.S.grad = -grad_S
+        self.mu.grad = -grad_mu
+        self.train_mse = torch.mean((self.forward(X) - self.mu)**2)
 
     def inference(self, X_c):
-        errs_X = torch.matmul(self.forward(X_c), torch.linalg.inv(self.S).T)
+        errs_X = torch.matmul(self.forward(X_c) - self.mu, torch.linalg.inv(self.S).T)
         delta_X = -errs_X
 
         return delta_X
@@ -41,6 +45,8 @@ class RecPCN(nn.Module):
             self.nonlin = utils.Sigmoid()
         elif mode == 'binary':
             self.nonlin = utils.Binary()
+        elif mode == 'tanh':
+            self.nonlin = utils.Tanh()
         else:
             raise ValueError("no such nonlinearity!")
 
