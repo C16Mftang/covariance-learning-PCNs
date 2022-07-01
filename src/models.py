@@ -201,6 +201,108 @@ class HybridPCN(MultilayerPCN):
                 self.layers[l].bias.grad = -torch.sum(self.errs[l+1], axis=0)
 
 
+class DGPCN(nn.Module):
+    def __init__(self, nodes, nonlin, Dt, lamb=0):
+        super().__init__()
+        self.n_layers = len(nodes)
+        # weight connecting EC to DG
+        self.P = nn.Linear(nodes[0], nodes[1], bias=False)
+        # weight connecting DG to CA3
+        self.Q = nn.Linear(nodes[1], nodes[2], bias=False)
+        # weight connecting CA3 to EC
+        self.V = nn.Linear(nodes[2], nodes[0], bias=False)
+        # recurrent weight in DG, initialized to be 0
+        self.W_DG = nn.Linear(nodes[1], nodes[1], bias=False)
+        nn.init.zeros_(self.W_DG.weight)
+        # recurren weight in CA3, initialized to be 0
+        self.W_CA3 = nn.Linear(nodes[2], nodes[2], bias=True)
+        nn.init.zeros_(self.W_CA3.weight)
+        nn.init.zeros_(self.W_CA3.bias)
+        
+        self.Dt = Dt
+        if nonlin == 'Tanh':
+            self.nonlin = utils.Tanh()
+        elif nonlin == 'ReLU':
+            self.nonlin = utils.ReLU()
+        self.lamb = lamb
+        self.n_layers = len(nodes)
+        assert self.n_layers == 3
+
+    def initialize(self):
+        self.val_nodes = [[] for _ in range(self.n_layers)]
+        self.preds = [[] for _ in range(self.n_layers)]
+        self.errs = [[] for _ in range(self.n_layers)]
+
+    def forward(self, inp):
+        val = self.P(self.nonlin(inp))
+        val = self.Q(self.nonlin(val))
+        val = self.V(self.nonlin(val))
+        
+        return val
+
+    def update_err_nodes(self):
+        # EC
+        self.preds[0] = self.V(self.nonlin(self.val_nodes[2]))
+        self.errs[0] = self.val_nodes[0] - self.preds[0]
+        # DG
+        # Nonlinear recurrent layer
+        self.preds[1] = self.P(self.nonlin(self.val_nodes[0])) + self.W_DG(self.nonlin(self.val_nodes[1]))
+        self.errs[1] = self.val_nodes[1] - self.preds[1]
+        # CA3
+        # Nonlinear recurrent layer
+        self.preds[2] = self.Q(self.nonlin(self.val_nodes[1])) + self.W_CA3(self.nonlin(self.val_nodes[2]))
+        self.errs[2] = self.val_nodes[2] - self.preds[2]
+
+    def set_nodes(self, batch_inp):
+        # EC
+        self.val_nodes[0] = batch_inp.clone()
+        # DG
+        self.val_nodes[1] = self.P(self.nonlin(self.val_nodes[0]))
+        # CA3
+        self.val_nodes[2] = self.Q(self.nonlin(self.val_nodes[1])) + self.W_CA3.bias.detach().clone()
+
+        # computing error nodes
+        self.update_err_nodes()
+
+    def update_val_nodes(self, update_mask, recon=False):
+        with torch.no_grad():
+            # EC
+            if recon:
+                # relax sensory layer value nodes if its corrupted (during reconstruction phase)
+                self.val_nodes[0] = self.val_nodes[0] + self.Dt * (-self.errs[0] * update_mask)
+                # self.lamb = 0.
+
+            # DG
+            # sparse penalty on activities; could also be on W_DG
+            deriv_DG = self.nonlin.deriv(self.val_nodes[1])
+            delta_DG = -self.errs[1] - self.lamb * torch.sign(self.val_nodes[1]) + deriv_DG * torch.matmul(self.errs[1], self.W_DG.weight)
+            self.val_nodes[1] = self.val_nodes[1] + self.Dt * delta_DG
+
+            # CA3
+            deriv_CA3 = self.nonlin.deriv(self.val_nodes[2])
+            delta_CA3 = -self.errs[2] + deriv_CA3 * torch.matmul(self.errs[2], self.W_CA3.weight) + deriv_CA3 * torch.matmul(self.errs[0], self.V.weight)
+            self.val_nodes[2] = self.val_nodes[2] + self.Dt * delta_CA3
+
+            self.update_err_nodes()
+
+    def update_grads(self):
+        self.P.weight.grad = -torch.matmul(self.errs[1].t(), self.nonlin(self.val_nodes[0]))
+        self.W_DG.weight.grad = -torch.matmul(self.errs[1].t(), self.nonlin(self.val_nodes[1])).fill_diagonal_(0)
+
+        self.Q.weight.grad = -torch.matmul(self.errs[2].t(), self.nonlin(self.val_nodes[1]))
+        self.W_CA3.weight.grad = -torch.matmul(self.errs[2].t(), self.nonlin(self.val_nodes[2])).fill_diagonal_(0)
+        self.W_CA3.bias.grad = -torch.sum(self.errs[2], axis=0)
+
+        self.V.weight.grad = -torch.matmul(self.errs[0].t(), self.nonlin(self.val_nodes[2]))
+
+    def train_pc_generative(self, batch_inp, n_iters, update_mask):
+        self.initialize()
+        self.set_nodes(batch_inp)
+        for itr in range(n_iters):
+            self.update_val_nodes(update_mask)
+        self.update_grads()
+
+
 class AutoEncoder(nn.Module):
     def __init__(self, dim, latent_dim):
         super().__init__()
