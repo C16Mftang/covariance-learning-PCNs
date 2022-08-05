@@ -202,22 +202,39 @@ class HybridPCN(MultilayerPCN):
 
 
 class DGPCN(nn.Module):
-    def __init__(self, nodes, nonlin, Dt, lamb=0):
+    def __init__(self, nodes, nonlin, Dt, lamb, MF_sparsity, Q_range=None):
+        """Input variables:
+
+        MF_sparsity: sparsity of the mossy fibre pathway (DG-CA3)
+        """
         super().__init__()
         self.n_layers = len(nodes)
+
         # weight connecting EC to DG
         self.P = nn.Linear(nodes[0], nodes[1], bias=False)
-        # weight connecting DG to CA3
+        # nn.init.uniform_(self.P.weight, a=-1.0, b=1.0)
+
+        # weight connecting DG to CA3, sparse
         self.Q = nn.Linear(nodes[1], nodes[2], bias=False)
+        if Q_range:
+            nn.init.uniform_(self.Q.weight, a=-Q_range, b=Q_range)
+        # update mask of Q: randomly select MF weights that are plastic
+        Q_mask = torch.where(torch.rand_like(self.Q.weight) < MF_sparsity, 0.0, 1.0)
+        self.register_buffer("Q_mask", Q_mask)
+        self.Q.weight = nn.Parameter(self.Q.weight.clone().detach() * self.Q_mask)
+
         # weight connecting CA3 to EC
         self.V = nn.Linear(nodes[2], nodes[0], bias=False)
+
         # recurrent weight in DG, initialized to be 0
         self.W_DG = nn.Linear(nodes[1], nodes[1], bias=False)
         nn.init.zeros_(self.W_DG.weight)
-        # recurren weight in CA3, initialized to be 0
+
+        # recurrent weight in CA3, initialized to be 0
         self.W_CA3 = nn.Linear(nodes[2], nodes[2], bias=True)
         nn.init.zeros_(self.W_CA3.weight)
-        nn.init.zeros_(self.W_CA3.bias)
+        # nn.init.zeros_(self.W_CA3.bias)
+        nn.init.normal_(self.W_CA3.bias, mean=0.0, std=1.0)
         
         self.Dt = Dt
         if nonlin == 'Tanh':
@@ -289,7 +306,8 @@ class DGPCN(nn.Module):
         self.P.weight.grad = -torch.matmul(self.errs[1].t(), self.nonlin(self.val_nodes[0]))
         self.W_DG.weight.grad = -torch.matmul(self.errs[1].t(), self.nonlin(self.val_nodes[1])).fill_diagonal_(0)
 
-        self.Q.weight.grad = -torch.matmul(self.errs[2].t(), self.nonlin(self.val_nodes[1]))
+        Q_grad = -torch.matmul(self.errs[2].t(), self.nonlin(self.val_nodes[1]))
+        self.Q.weight.grad = Q_grad * self.Q_mask
         self.W_CA3.weight.grad = -torch.matmul(self.errs[2].t(), self.nonlin(self.val_nodes[2])).fill_diagonal_(0)
         self.W_CA3.bias.grad = -torch.sum(self.errs[2], axis=0)
 
