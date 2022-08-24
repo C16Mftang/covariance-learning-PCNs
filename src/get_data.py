@@ -124,7 +124,7 @@ def get_mnist(datapath, sample_size, sample_size_test, batch_size, seed, device,
 
 def get_cifar10(datapath, sample_size, sample_size_test, batch_size, seed, device, classes=None):
     transform = transforms.Compose([
-        # transforms.Grayscale(num_output_channels=1),
+        transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
     ])
     train = datasets.CIFAR10(datapath, train=True, transform=transform, download=True)
