@@ -119,19 +119,6 @@ class MultilayerPCN(nn.Module):
         # computing error nodes
         self.update_err_nodes()
 
-    def update_val_nodes(self, update_mask, recon=False):
-        with torch.no_grad():
-            for l in range(0, self.n_layers-1):
-                derivative = self.nonlins[l].deriv(self.val_nodes[l])
-                penalty = self.lamb if l == 0 else 0.
-                delta = -self.errs[l] - penalty * torch.sign(self.val_nodes[l]) + derivative * torch.matmul(self.errs[l+1], self.layers[l].weight)
-                self.val_nodes[l] = self.val_nodes[l] + self.Dt * delta
-            if recon:
-                # relax sensory layer value nodes if its corrupted (during reconstruction phase)
-                self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * (-self.errs[-1] * update_mask)
-
-            self.update_err_nodes()
-
     def update_grads(self):
         raise NotImplementedError()
 
@@ -166,6 +153,19 @@ class HierarchicalPCN(MultilayerPCN):
             else:
                 self.preds[l] = self.layers[l-1](self.nonlins[l-1](self.val_nodes[l-1]))
             self.errs[l] = self.val_nodes[l] - self.preds[l]
+    
+    def update_val_nodes(self, update_mask, recon=False):
+        with torch.no_grad():
+            for l in range(0, self.n_layers-1):
+                derivative = self.nonlins[l].deriv(self.val_nodes[l])
+                penalty = self.lamb if l == 0 else 0.
+                delta = -self.errs[l] - penalty * torch.sign(self.val_nodes[l]) + derivative * torch.matmul(self.errs[l+1], self.layers[l].weight)
+                self.val_nodes[l] = self.val_nodes[l] + self.Dt * delta
+            if recon:
+                # relax sensory layer value nodes if its corrupted (during reconstruction phase)
+                self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * (-self.errs[-1] * update_mask)
+
+            self.update_err_nodes()
 
     def update_grads(self):
         self.memory.grad = -torch.sum(self.errs[0], axis=0)
@@ -177,10 +177,11 @@ class HierarchicalPCN(MultilayerPCN):
 
 
 class HybridPCN(MultilayerPCN):
-    def __init__(self, nodes, nonlin, Dt, init_std=0., init_std_Wr=0., lamb=0, use_bias=False):
+    def __init__(self, nodes, nonlin, Dt, dendritic=True, init_std=0., init_std_Wr=0., lamb=0, use_bias=False):
         super().__init__(nodes, nonlin, Dt, lamb, use_bias)
         self.memory = nn.Parameter(init_std * torch.randn((self.mem_dim,)))
         self.Wr = nn.Parameter(init_std_Wr * torch.randn((self.mem_dim, self.mem_dim)))
+        self.dendritic = dendritic
 
     def update_err_nodes(self):
         for l in range(0, self.n_layers):
@@ -189,6 +190,21 @@ class HybridPCN(MultilayerPCN):
             else:
                 self.preds[l] = self.layers[l-1](self.nonlins[l-1](self.val_nodes[l-1]))
             self.errs[l] = self.val_nodes[l] - self.preds[l]
+
+    def update_val_nodes(self, update_mask, recon=False):
+        with torch.no_grad():
+            for l in range(0, self.n_layers-1):
+                derivative = self.nonlins[l].deriv(self.val_nodes[l])
+                penalty = self.lamb if l == 0 else 0.
+                delta = -self.errs[l] - penalty * torch.sign(self.val_nodes[l]) + derivative * torch.matmul(self.errs[l+1], self.layers[l].weight)
+                if l == 0 and self.dendritic is False:
+                    delta = delta + torch.matmul(self.errs[l], self.Wr)
+                self.val_nodes[l] = self.val_nodes[l] + self.Dt * delta
+            if recon:
+                # relax sensory layer value nodes if its corrupted (during reconstruction phase)
+                self.val_nodes[-1] = self.val_nodes[-1] + self.Dt * (-self.errs[-1] * update_mask)
+
+            self.update_err_nodes()
 
     def update_grads(self):
         self.memory.grad = -torch.sum(self.errs[0], axis=0)
