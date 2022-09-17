@@ -22,7 +22,7 @@ class ExplicitPCN(nn.Module):
 
         self.S.grad = -grad_S
         self.mu.grad = -grad_mu
-        self.train_mse = torch.mean((self.forward(X) - self.mu)**2)
+        self.train_mse = torch.mean(errs**2)
 
     def inference(self, X_c):
         errs_X = torch.matmul(self.forward(X_c) - self.mu, torch.linalg.inv(self.S).T)
