@@ -66,7 +66,7 @@ class RecPCN(nn.Module):
 
     def inference(self, X_c):
         errs_X = X_c - self.forward(X_c)
-        delta_X = -errs_X if self.dendrite else (-errs_X + self.nonlin.deriv(X_c).to(errs_X.device) * torch.matmul(errs_X, self.Wr))
+        delta_X = -errs_X if self.dendrite else (-errs_X + self.nonlin.deriv(X_c) * torch.matmul(errs_X, self.Wr))
 
         return delta_X
         

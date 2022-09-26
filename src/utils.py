@@ -44,7 +44,7 @@ class Linear(nn.Module):
         return inp
 
     def deriv(self, inp):
-        return torch.ones((1,))
+        return torch.ones((1,)).to(inp.device)
 
 
 def cov(x, rowvar=False, bias=False, ddof=None, aweights=None):
