@@ -40,13 +40,13 @@ def add_gaussian_noise(X, var, device):
     return X_c, update_mask
 
 
-def get_2d_gaussian(sample_size, device):
+def get_2d_gaussian(sample_size, device, seed=10):
     dim = 2
     # simulation data
     mean = np.array([0,0])
     cov = np.array([[2,1],
                     [1,2]])
-    np.random.seed(10)
+    np.random.seed(seed)
     X = np.random.multivariate_normal(mean, cov, size=sample_size)
     X_c = X * np.concatenate([np.ones((sample_size,1))]+[np.zeros((sample_size,1))]*(dim-1), axis=1)
     update_mask = np.concatenate([np.zeros((sample_size,1))]+[np.ones((sample_size,1))]*(dim-1), axis=1)
