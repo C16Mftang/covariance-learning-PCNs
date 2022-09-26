@@ -91,6 +91,8 @@ class MultilayerPCN(nn.Module):
             nonlin = utils.Tanh()
         elif nonlin == 'ReLU':
             nonlin = utils.ReLU()
+        elif nonlin == 'Linear':
+            nonlin = utils.Linear()
         self.nonlins = [nonlin] * (self.n_layers - 1)
         self.use_bias = use_bias
         self.lamb = lamb
