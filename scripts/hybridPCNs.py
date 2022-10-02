@@ -22,12 +22,12 @@ inference_iters = 400
 inference_lr = 1e-2
 noise_var = 0.05
 divisor = 2
-image_size = 28
+image_size = 32
 sample_sizes = [256]
 sample_size_test = 1
 batch_sizes = [sample_size // 8 for sample_size in sample_sizes]
-seeds = range(1)
-n_layers = [1]
+seeds = range(3)
+n_layers = [1, 2, 3, 4]
 model_path = './models/'
 result_path = './results/'
 dataset = 'cifar10'
@@ -53,7 +53,7 @@ for n_layer in n_layers:
             print(flattened_size)
 
             nodes = [256] * n_layer + [flattened_size]
-            pcn_h = HybridPCN(nodes, 'Tanh', inference_lr, dendritic=dendritic).to(device)
+            pcn_h = HybridPCN(nodes, 'Tanh', inference_lr, dendritic=dendritic, init_std=1.).to(device)
 
             optimizer = torch.optim.Adam(pcn_h.parameters(), lr=learning_lr)
 
@@ -73,7 +73,7 @@ for n_layer in n_layers:
                 train_mses.append(train_mse)
 
             torch.save(pcn_h.state_dict(), 
-                       model_path+f'n_layers{n_layer}_dendritic{dendritic}_pcn_seed{seed}_sample_size{sample_size}_{dataset}.pt')
+                       model_path+f'n_layers{n_layer}_dendritic{dendritic}_pcn_seed{seed}_sample_size{sample_size}_{dataset}_initstd{1.0}.pt')
 
             # plot
             # plt.rcParams['figure.dpi'] = 70
