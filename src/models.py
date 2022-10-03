@@ -130,6 +130,7 @@ class MultilayerPCN(nn.Module):
         for itr in range(n_iters):
             self.update_val_nodes(update_mask)
         self.update_grads()
+        self.register_buffer('top_activities', self.val_nodes[0])
 
     def test_pc_generative(self, corrupt_inp, n_iters, update_mask, sensory=True):
         self.initialize()
