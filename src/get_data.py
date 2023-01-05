@@ -78,7 +78,7 @@ def get_gaussian(datapath, sample_size, batch_size, seed, device):
         random.seed(seed)
         train = train[random.sample(range(len(train)), sample_size)] # size, 5, 5
     
-    X = torch.tensor(train)
+    X = train.clone().detach()
 
     return X
 
