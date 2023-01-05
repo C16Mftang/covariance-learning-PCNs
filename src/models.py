@@ -25,8 +25,8 @@ class ExplicitPCN(nn.Module):
         self.train_mse = torch.mean(errs**2)
 
     def inference(self, X_c):
-        self.errs_X = torch.matmul(self.forward(X_c) - self.mu, torch.linalg.inv(self.S).T)
-        delta_X = -self.errs_X
+        errs_X = torch.matmul(self.forward(X_c) - self.mu, torch.linalg.inv(self.S).T)
+        delta_X = -errs_X
 
         return delta_X
 
