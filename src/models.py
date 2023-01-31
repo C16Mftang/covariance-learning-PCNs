@@ -69,6 +69,15 @@ class RecPCN(nn.Module):
         delta_X = -errs_X if self.dendrite else (-errs_X + self.nonlin.deriv(X_c) * torch.matmul(errs_X, self.Wr))
 
         return delta_X
+
+    def energy(self, X):
+        """Calculate the energy value of the implicit model given a batch of input
+        Aka the squared error
+
+        Returns a vector of energies, indicating the energy value for each input in X
+        """
+        return torch.linalg.norm((X - self.forward(X)), dim=1)
+
         
 
 class MultilayerPCN(nn.Module):
