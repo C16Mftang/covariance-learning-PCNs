@@ -157,7 +157,7 @@ for c, cover_size in enumerate(cover_sizes):
         dendritic_std = np.std(dendritic_mses, axis=1)
 
         # plt.rcParams['figure.dpi'] = 150
-        plt.figure(figsize=(4, 3))
+        plt.figure(figsize=(5, 3))
         plt.errorbar(np.arange(len(cover_sizes)), explicit_mean, yerr=explicit_std, lw=2, label='explicit', color='#708A83')
         plt.errorbar(np.arange(len(cover_sizes)), implicit_mean, yerr=implicit_std, lw=2, label='implicit', color='#B8BCBF')
         plt.errorbar(np.arange(len(cover_sizes)), dendritic_mean, yerr=dendritic_std, lw=2, label='dendritic', color='#D77A41')
