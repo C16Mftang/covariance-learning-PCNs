@@ -136,7 +136,6 @@ for k in range(len(sample_sizes)):
         ax[0].set_title('retrieval MSE')
         ax[1].plot(train_mses)
         ax[1].set_title('train MSE')
-        plt.show()
         plt.savefig(sub_path+'/MSEs')
 
         fig, ax = plt.subplots(3, 5, figsize=(7, 5))
@@ -148,7 +147,6 @@ for k in range(len(sample_sizes)):
             ax[2, i].imshow(X_recon[i].reshape((image_size, image_size)).cpu().detach().numpy(), cmap='gray', vmin=0, vmax=1)
             ax[2, i].axis('off')
             ax[2, 0].set_title(f'{model_type}')
-        plt.show()
         plt.savefig(sub_path+'/examples')
 
 # finally save the retrieval MSEs for reproducing the figures
