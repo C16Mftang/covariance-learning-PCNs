@@ -22,11 +22,11 @@ print(device)
 # vary these hyparams for different models and datasets
 model_type = 'imp' # 'exp', 'imp', 'den'
 nonlin = 'linear' # 'linear', 'rate', 'tanh', 'binary'
-dataset = 'cifar10' # 'cifar10' and 'mnist'
+dataset = 'mnist' # 'cifar10' and 'mnist'
 corruption = 'cover' # 'cover' or 'noise'
 
 # sample_sizes = [8, 16, 32, 64, 128, 256] # for full reproduction
-sample_sizes = [16, 128]
+sample_sizes = [16]
 sample_size_test = 1
 batch_sizes = [sample_size // 8 for sample_size in sample_sizes]
 noise = 0.05
@@ -34,10 +34,13 @@ divisor = 2
 inference_lr = 0.1
 learning_lr = 1e-4 # 1e-5 for explicit model
 learning_iters = [200, 400]
-seeds = range(3)
-image_size = 32
+seeds = range(1)
+if dataset == 'mnist':
+    image_size = 28
+elif dataset == 'cifar10':
+    image_size = 32
 model_path = './models/'
-result_path = os.path.join('./results/', 'novelty_detection')
+result_path = os.path.join('./results/', f'novelty_detection_{dataset}')
 if not os.path.exists(result_path):
     os.makedirs(result_path)
 
@@ -49,19 +52,24 @@ for k in range(len(sample_sizes)):
         sub_path = os.path.join(result_path, f'{sample_size}_samples_seed_{seed}')
         if not os.path.exists(sub_path):
             os.makedirs(sub_path)
-        (X, _), (X_test, _) = get_cifar10('./data', 
+        
+        # get the dataset
+        (X, _), (X_test, _) = get_mnist('./data', 
                                             sample_size=sample_size, 
                                             sample_size_test=sample_size,
                                             batch_size=batch_size, 
                                             seed=seed, 
                                             device=device,
+                                            binary=True,
                                             classes=None)
         size = X.shape
         flattened_size = size[-1]*size[-2]*size[-3]
         X = X.reshape(-1, flattened_size)
         X_test = X_test.reshape(-1, flattened_size)
         print(flattened_size)
+        print(X[0])
 
+        # determine model type
         if model_type == 'exp':
             pcn = ExplicitPCN(flattened_size).to(device)
         elif model_type == 'den':
@@ -90,8 +98,16 @@ for k in range(len(sample_sizes)):
         energy_fam = pcn.energy(X).cpu().detach().numpy()
         energy_nov = pcn.energy(X_test).cpu().detach().numpy()
         
+        # visualize the energy distribution
         plt.figure()
         plt.hist(energy_fam, label='familiar')
         plt.hist(energy_nov, label='novel')
         plt.legend()
         plt.savefig(sub_path+'/energy_distributions', dpi=150)
+
+        # visualze the training examples (whether its binarized)
+        fig, ax = plt.subplots(5, 1, figsize=(1, 5))
+        for i in range(5):
+            ax[i].imshow(X[i].reshape((image_size, image_size)).cpu().detach().numpy(), cmap='gray', vmin=0, vmax=1)
+            ax[i].axis('off')
+        plt.savefig(sub_path+'/examples')

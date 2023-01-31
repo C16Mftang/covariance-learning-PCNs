@@ -83,7 +83,7 @@ def get_gaussian(datapath, sample_size, batch_size, seed, device):
     return X
 
 
-def get_mnist(datapath, sample_size, sample_size_test, batch_size, seed, device, classes=None):
+def get_mnist(datapath, sample_size, sample_size_test, batch_size, seed, device, binary=False, classes=None):
     # classes: a list of specific class to sample from
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -118,11 +118,17 @@ def get_mnist(datapath, sample_size, sample_size_test, batch_size, seed, device,
     X_test = torch.cat(X_test, dim=0).to(device) # size, 28, 28
     y_test = torch.cat(y_test, dim=0).to(device)
 
+    if binary:
+        X[X > 0.5] = 1
+        X[X < 0.5] = 0
+        X_test[X_test > 0.5] = 1
+        X_test[X_test < 0.5] = 0
+
     print(X.shape)
     return (X, y), (X_test, y_test)
 
 
-def get_cifar10(datapath, sample_size, sample_size_test, batch_size, seed, device, classes=None):
+def get_cifar10(datapath, sample_size, sample_size_test, batch_size, seed, device, binary=False, classes=None):
     transform = transforms.Compose([
         transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
@@ -156,6 +162,12 @@ def get_cifar10(datapath, sample_size, sample_size_test, batch_size, seed, devic
         y_test.append(targ)
     X_test = torch.cat(X_test, dim=0).to(device) # size, 32, 32
     y_test = torch.cat(y_test, dim=0).to(device)
+
+    if binary:
+        X[X > 0.5] = 1
+        X[X < 0.5] = 0
+        X_test[X_test > 0.5] = 1
+        X_test[X_test < 0.5] = 0
 
     return (X, y), (X_test, y_test)
 
