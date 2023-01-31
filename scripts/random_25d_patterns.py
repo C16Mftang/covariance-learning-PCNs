@@ -1,3 +1,10 @@
+"""
+This script trains single-layer PCNs for associatiev memory tasks, and saves the models to the models folder
+
+It can be used to produce figures 3 in the paper
+"""
+
+import os
 import torch
 from torchvision import datasets, transforms
 from torchvision.transforms import transforms
@@ -23,6 +30,10 @@ image_size = 5
 sample_size = 20
 cover_sizes = np.arange(2, 12, 2)
 seeds = np.arange(5)
+# create save path
+result_path = os.path.join('./results/', '25d_random')
+if not os.path.exists(result_path):
+    os.makedirs(result_path)
 
 explicit_mses = np.zeros((len(cover_sizes), len(seeds)))
 implicit_mses = np.zeros((len(cover_sizes), len(seeds)))
@@ -30,6 +41,10 @@ dendritic_mses = np.zeros((len(cover_sizes), len(seeds)))
 for c, cover_size in enumerate(cover_sizes):
     for s, seed in enumerate(seeds):
         print(f'cover size: {cover_size}; seed: {seed}')
+        sub_path = os.path.join(result_path, f'cover_{cover_size}_seed_{seed}')
+        if not os.path.exists(sub_path):
+            os.makedirs(sub_path)
+
         X = get_gaussian('./data', 
                         sample_size=sample_size, 
                         batch_size=batch_size, 
@@ -128,7 +143,7 @@ for c, cover_size in enumerate(cover_sizes):
         ax[2,0].set_title('den learning')
         ax[2,1].plot(inference_mses_den)
         ax[2,1].set_title('den inference')
-        plt.savefig(f'./results/25d_random/curves_cover{cover_size}_seed{seed}', dpi=100)
+        plt.savefig(sub_path+'/MSEs')
         plt.show()
 
         image_size = 5
@@ -145,29 +160,29 @@ for c, cover_size in enumerate(cover_sizes):
             ax[i, 3].axis('off')
             ax[i, 4].imshow(X_recon_den[i].cpu().detach().numpy().reshape(image_size, image_size), cmap='gray', vmin=-1, vmax=1)
             ax[i, 4].axis('off')
-        plt.savefig(f'./results/25d_random/gaussian5x5_cover{cover_size}_seed{seed}', dpi=400)
+        plt.savefig(sub_path+'/examples')
         plt.show()
 
-        # final visualization
-        explicit_mean = np.mean(explicit_mses, axis=1)
-        explicit_std = np.std(explicit_mses, axis=1)
-        implicit_mean = np.mean(implicit_mses, axis=1)
-        implicit_std = np.std(implicit_mses, axis=1)
-        dendritic_mean = np.mean(dendritic_mses, axis=1)
-        dendritic_std = np.std(dendritic_mses, axis=1)
+# final visualization
+explicit_mean = np.mean(explicit_mses, axis=1)
+explicit_std = np.std(explicit_mses, axis=1)
+implicit_mean = np.mean(implicit_mses, axis=1)
+implicit_std = np.std(implicit_mses, axis=1)
+dendritic_mean = np.mean(dendritic_mses, axis=1)
+dendritic_std = np.std(dendritic_mses, axis=1)
 
-        # plt.rcParams['figure.dpi'] = 150
-        plt.figure(figsize=(5, 3))
-        plt.errorbar(np.arange(len(cover_sizes)), explicit_mean, yerr=explicit_std, lw=2, label='explicit', color='#708A83')
-        plt.errorbar(np.arange(len(cover_sizes)), implicit_mean, yerr=implicit_std, lw=2, label='implicit', color='#B8BCBF')
-        plt.errorbar(np.arange(len(cover_sizes)), dendritic_mean, yerr=dendritic_std, lw=2, label='dendritic', color='#D77A41')
+# plt.rcParams['figure.dpi'] = 150
+plt.figure(figsize=(5, 3))
+plt.errorbar(np.arange(len(cover_sizes)), explicit_mean, yerr=explicit_std, lw=2, label='explicit', color='#708A83')
+plt.errorbar(np.arange(len(cover_sizes)), implicit_mean, yerr=implicit_std, lw=2, label='implicit', color='#B8BCBF')
+plt.errorbar(np.arange(len(cover_sizes)), dendritic_mean, yerr=dendritic_std, lw=2, label='dendritic', color='#D77A41')
 
-        plt.legend(loc='best')
-        plt.xticks(np.arange(len(cover_sizes)), cover_sizes)
-        plt.xlabel('Number of masked pixels')
-        plt.ylabel('MSE')
-        plt.ticklabel_format(axis='y', style='sci', scilimits=(-2,2))
-        plt.title('Retrieval MSE, different mask sizes')
-        plt.tight_layout()
-        plt.savefig('./results/25d_random/all_mses', dpi=400)
-        plt.show()
+plt.legend(loc='best')
+plt.xticks(np.arange(len(cover_sizes)), cover_sizes)
+plt.xlabel('Number of masked pixels')
+plt.ylabel('MSE')
+plt.ticklabel_format(axis='y', style='sci', scilimits=(-2,2))
+plt.title('Retrieval MSE, different mask sizes')
+plt.tight_layout()
+plt.savefig(result_path+'/all_mses', dpi=400)
+plt.show()
