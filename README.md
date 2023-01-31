@@ -23,4 +23,4 @@ Once the above are done, you can simply run a script by entering for example:
 
 A directory named `results` will the be created to store all the data and figures collected from the experiments.
 
-A jupyter notebook will be produced to show how to generate figure from our paper based on the collected results. (Coming Soon)
+A jupyter notebook will be produced to show how to generate figure from our paper based on the collected results (Coming Soon).
