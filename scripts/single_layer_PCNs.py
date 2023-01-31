@@ -53,7 +53,7 @@ image_size = 32
 model_path = './models/'
 result_path = os.path.join('./results/', f'{model_type}_{nonlin}_{dataset}_{corruption}')
 if not os.path.exists(result_path):
-    os.mkdir(result_path)
+    os.makedirs(result_path)
 
 all_mses = np.zeros((len(sample_sizes), len(seeds)))
 for k in range(len(sample_sizes)):
@@ -62,7 +62,7 @@ for k in range(len(sample_sizes)):
         print(f'sample size {sample_size}, seed {seed}')
         sub_path = os.path.join(result_path, f'{sample_size}_samples_seed_{seed}')
         if not os.path.exists(sub_path):
-            os.mkdir(sub_path)
+            os.makedirs(sub_path)
         (X, _), (X_test, _) = get_cifar10('./data', 
                                             sample_size=sample_size, 
                                             sample_size_test=sample_size_test,
