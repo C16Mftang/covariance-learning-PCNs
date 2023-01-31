@@ -1,10 +1,10 @@
-name: /data/ndcn-computational-neuroscience/scro4155/myenv
+name: cov-env
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - python=3.8
   - numpy
-  - torchaudio
   - pytorch
   - torchvision
   - cudatoolkit=11.3
