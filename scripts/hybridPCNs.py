@@ -18,7 +18,7 @@ plt.style.use('seaborn')
 # hyperparameters
 learning_iters = 200
 learning_lr = 5e-4
-inference_iters = 400
+inference_iters = 50
 inference_lr = 1e-2
 noise_var = 0.05
 divisor = 2
@@ -26,7 +26,7 @@ image_size = 32
 sample_sizes = [64]
 sample_size_test = 1
 batch_sizes = [sample_size // 8 for sample_size in sample_sizes]
-seeds = range(3)
+seeds = range(1)
 n_layers = [1, 2, 3, 4]
 model_path = './models/'
 result_path = './results/'
@@ -69,15 +69,19 @@ for n_layer in n_layers:
                         pcn_h.train_pc_generative(data, inference_iters, update_mask)
                         optimizer.step()
                         progress_bar.update(batch_size)
-                train_mse = torch.mean(pcn_h.errs[-1]**2).cpu().detach().numpy()
+                
+                # here we define train_mse as the total energy i.e. sum of all layers' prediction errors squared
+                train_mse = pcn_h.energy().cpu().detach().numpy()
                 train_mses.append(train_mse)
 
             torch.save(pcn_h.state_dict(), 
                        model_path+f'n_layers{n_layer}_dendritic{dendritic}_pcn_seed{seed}_sample_size{sample_size}_{dataset}_initstd{1.0}.pt')
 
             # plot
-            # plt.rcParams['figure.dpi'] = 70
-            # plt.figure()
-            # plt.plot(train_mses)
-            # plt.show()
+            plt.rcParams['figure.dpi'] = 70
+            plt.figure()
+            plt.plot(train_mses)
+            plt.xlabel('epochs')
+            plt.ylabel('total energy')
+            plt.savefig('./results/total_energy')
 

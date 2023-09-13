@@ -151,6 +151,13 @@ class MultilayerPCN(nn.Module):
             return self.val_nodes[-1]
         else:
             return self.preds[-1]
+
+    def energy(self):
+        """Function to obtain the sum of all layers' squared MSE"""
+        total_energy = 0
+        for l in range(self.n_layers):
+            total_energy += torch.sum(self.errs[l] ** 2)
+        return total_energy
     
     
 class HierarchicalPCN(MultilayerPCN):
