@@ -21,9 +21,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
 learning_iters = 200
-learning_lrs = [0.005, 0.005, 0.005]
+learning_lr = 5e-3
 inference_iters = 100
-inference_lrs = [0.1, 0.1, 0.1]
+inference_lr = 0.1
 batch_size = 20
 cover_size = 12
 image_size = 5
@@ -62,7 +62,7 @@ for c, cover_size in enumerate(cover_sizes):
 
         # explicit model
         pcn_exp = ExplicitPCN(dim=image_size**2).to(device)
-        optimizer = torch.optim.SGD(pcn_exp.parameters(), lr=learning_lrs[0])
+        optimizer = torch.optim.SGD(pcn_exp.parameters(), lr=learning_lr)
         learning_mses_exp = []
         for i in range(learning_iters):
             for batch_idx in range(0, sample_size, batch_size):
@@ -77,7 +77,7 @@ for c, cover_size in enumerate(cover_sizes):
         X_recon_exp = X_c.clone()
         for j in range(inference_iters):
             delta_X = pcn_exp.inference(X_recon_exp)
-            X_recon_exp += inference_lrs[0] * (delta_X * update_mask)
+            X_recon_exp += inference_lr * (delta_X * update_mask)
             mse = torch.mean((X_recon_exp - X)**2).cpu().detach().numpy()
             inference_mses_exp.append(mse)
         
@@ -85,7 +85,7 @@ for c, cover_size in enumerate(cover_sizes):
 
         # implicit model
         pcn_imp = RecPCN(dim=image_size**2, dendrite=False).to(device)
-        optimizer = torch.optim.SGD(pcn_imp.parameters(), lr=learning_lrs[1])
+        optimizer = torch.optim.SGD(pcn_imp.parameters(), lr=learning_lr)
         learning_mses_imp = []
         for i in range(learning_iters):
             for batch_idx in range(0, sample_size, batch_size):
@@ -100,7 +100,7 @@ for c, cover_size in enumerate(cover_sizes):
         X_recon_imp = X_c.clone()
         for j in range(inference_iters):
             delta_X = pcn_imp.inference(X_recon_imp)
-            X_recon_imp += inference_lrs[1] * (delta_X * update_mask)
+            X_recon_imp += inference_lr * (delta_X * update_mask)
             mse = torch.mean((X_recon_imp - X)**2).cpu().detach().numpy()
             inference_mses_imp.append(mse)
 
@@ -108,7 +108,7 @@ for c, cover_size in enumerate(cover_sizes):
 
         # dendritic model
         pcn_den = RecPCN(dim=image_size**2, dendrite=True).to(device)
-        optimizer = torch.optim.SGD(pcn_den.parameters(), lr=learning_lrs[2])
+        optimizer = torch.optim.SGD(pcn_den.parameters(), lr=learning_lr)
         learning_mses_den = []
         for i in range(learning_iters):
             for batch_idx in range(0, sample_size, batch_size):
@@ -123,7 +123,7 @@ for c, cover_size in enumerate(cover_sizes):
         X_recon_den = X_c.clone()
         for j in range(inference_iters):
             delta_X = pcn_den.inference(X_recon_den)
-            X_recon_den += inference_lrs[2] * (delta_X * update_mask)
+            X_recon_den += inference_lr * (delta_X * update_mask)
             mse = torch.mean((X_recon_den - X)**2).cpu().detach().numpy()
             inference_mses_den.append(mse)
 

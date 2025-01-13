@@ -78,7 +78,24 @@ class RecPCN(nn.Module):
         """
         return torch.linalg.norm((X - self.forward(X)), dim=1)
 
-        
+class HopfieldNetwork(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+        self.W = nn.Parameter(torch.zeros((dim, dim)))
+
+    def forward(self, X):
+        return torch.sign(torch.matmul(X, self.W))
+
+    def learning(self, patterns):
+        num_patterns = patterns.shape[0]
+        self.W.data = torch.matmul(patterns.T, patterns) / num_patterns
+        # self.W.data.fill_diagonal_(0)
+
+    def inference(self, X, steps=10):
+        for _ in range(steps):
+            X = self.forward(X)
+        return X
 
 class MultilayerPCN(nn.Module):
     def __init__(self, nodes, nonlin, Dt, lamb=0, use_bias=False):
