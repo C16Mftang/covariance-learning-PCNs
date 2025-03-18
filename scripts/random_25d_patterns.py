@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 plt.style.use('seaborn')
 from src.get_data import *
 from src.models import *
-from src.utils import cov
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
