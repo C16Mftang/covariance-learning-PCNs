@@ -1,3 +1,9 @@
 *.svg
 *.pdf
 **/__pycache__/
+*.sh
+src.egg-info/
+results/
+output/
+models/
+data/

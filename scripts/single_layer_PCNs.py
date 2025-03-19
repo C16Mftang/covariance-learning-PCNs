@@ -17,40 +17,42 @@ from matplotlib.lines import Line2D
 
 plt.style.use("seaborn")
 from tqdm import tqdm
+import argparse
 from torch.distributions.multivariate_normal import MultivariateNormal
 from src.get_data import *
 from src.models import *
 from src.utils import *
+from hparams import hparams
+
+print(hparams["imp"]["learning_iters"])
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--model_type', type=str, default='imp', help='type of model')
+args = parser.parse_args()
+
 # hyperparameters
 # vary these hyparams for different models and datasets
-model_type = "imp"  # 'exp', 'imp', 'den'
+model_type = args.model_type  # 'exp', 'imp', 'den'
 nonlin = "linear"  # 'linear', 'rate', 'tanh', 'binary'
-dataset = "cifar10"  # 'cifar10' and 'mnist'
+dataset = "bmnist"  # 'cifar10' and 'mnist' and 'bmnist'
 corruption = "cover"  # 'cover' or 'noise'
 
-# sample_sizes = [8, 16, 32, 64, 128, 256] # for full reproduction
-sample_sizes = [64]
+sample_sizes = [2,4,6,8,10,12] # for full reproduction
+# sample_sizes = [16]
 sample_size_test = 1
-batch_sizes = [sample_size // 8 for sample_size in sample_sizes]
+batch_sizes = [sample_size // 1 for sample_size in sample_sizes]
 noise = 0.05
 divisor = 2
-inference_lr = 0.1
-if model_type == "exp":
-    # inference_iters = [2000, 2000, 2000, 2000, 5000, 5000] # for full reproduction
-    inference_iters = [2000]
-else:
-    # inference_iters = [10000, 10000, 10000, 50000, 100000, 100000] # for full reproduction
-    inference_iters = [50000]
-learning_lr = 1e-4  # 1e-5 for explicit model
-# learning_iters = [200, 200, 200, 400, 400, 400] # for full reproduction
-learning_iters = [400]
-# seeds = [0, 1, 3, 4, 120, 1200, 10000]
-seeds = range(2)
-image_size = 32
+inference_iters = hparams[model_type]["inference_iters"]
+inference_lr = hparams[model_type]["inference_lr"]
+learning_iters = hparams[model_type]["learning_iters"]
+learning_lr = hparams[model_type]["learning_lr"]
+seeds = [0, 1, 3, 4, 120, 1200, 10000]
+# seeds = [1]
+image_size = 32 if 'cifar' in dataset else 28
 model_path = "./models/"
 result_path = os.path.join(
     "./results/", f"{model_type}_{nonlin}_{dataset}_{corruption}"
@@ -71,7 +73,7 @@ for k in range(len(sample_sizes)):
         sub_path = os.path.join(result_path, f"{sample_size}_samples_seed_{seed}")
         if not os.path.exists(sub_path):
             os.makedirs(sub_path)
-        (X, _), (X_test, _) = get_cifar10(
+        (X, _), (X_test, _) = get_mnist(
             "./data",
             sample_size=sample_size,
             sample_size_test=sample_size_test,
@@ -79,6 +81,7 @@ for k in range(len(sample_sizes)):
             seed=seed,
             device=device,
             classes=None,
+            binary=True
         )
         size = X.shape
         flattened_size = size[-1] * size[-2] * size[-3]
@@ -118,7 +121,7 @@ for k in range(len(sample_sizes)):
             if i % 10 == 0:
                 print(f"Epoch {i}, mse {train_mse}")
 
-        torch.save(pcn.state_dict(), sub_path + "/model.pt")
+        # torch.save(pcn.state_dict(), sub_path + "/model.pt")
 
         # retrieval
         print(f"Perform retrieval for {inference_iter} iterations")
@@ -148,8 +151,8 @@ for k in range(len(sample_sizes)):
         ax[1].set_title("train MSE")
         plt.savefig(sub_path + "/MSEs")
 
-        fig, ax = plt.subplots(3, 5, figsize=(7, 5))
-        for i in range(5):
+        fig, ax = plt.subplots(3, 2, figsize=(2, 4))
+        for i in range(2):
             ax[0, i].imshow(
                 X[i].reshape((image_size, image_size)).cpu().detach().numpy(),
                 cmap="gray",
@@ -172,7 +175,7 @@ for k in range(len(sample_sizes)):
             )
             ax[2, i].axis("off")
             ax[2, 0].set_title(f"{model_type}")
-        plt.savefig(sub_path + "/examples")
+        plt.savefig(sub_path + "/examples", bbox_inches='tight')
 
 # finally save the retrieval MSEs for reproducing the figures
 print("retrieval mses for all sample sizes and seeds")

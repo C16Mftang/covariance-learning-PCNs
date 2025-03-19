@@ -120,9 +120,9 @@ def get_mnist(datapath, sample_size, sample_size_test, batch_size, seed, device,
 
     if binary:
         X[X > 0.5] = 1
-        X[X < 0.5] = 0
+        X[X < 0.5] = -1
         X_test[X_test > 0.5] = 1
-        X_test[X_test < 0.5] = 0
+        X_test[X_test < 0.5] = -1
 
     print(X.shape)
     return (X, y), (X_test, y_test)
