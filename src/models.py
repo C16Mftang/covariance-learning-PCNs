@@ -89,12 +89,13 @@ class HopfieldNetwork(nn.Module):
 
     def learning(self, patterns):
         num_patterns = patterns.shape[0]
-        self.W.data = torch.matmul(patterns.T, patterns) / num_patterns
-        # self.W.data.fill_diagonal_(0)
+        # patterns = patterns - torch.mean(patterns, dim=0, keepdim=True)
+        for i in range(num_patterns):
+            self.W.data += torch.outer(patterns[i], patterns[i]) / num_patterns
+            self.W.data.fill_diagonal_(0)
 
-    def inference(self, X, steps=10):
-        for _ in range(steps):
-            X = self.forward(X)
+    def inference(self, X):
+        X = self.forward(X)
         return X
 
 class MultilayerPCN(nn.Module):
